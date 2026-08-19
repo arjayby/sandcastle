@@ -1,0 +1,3 @@
+{
+  "extends": "@sandcastle/config/tsconfig.base.json"
+}

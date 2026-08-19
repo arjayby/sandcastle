@@ -1,0 +1,28 @@
+{
+  "name": "@sandcastle/backend",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "",
+  "scripts": {
+    "dev": "convex dev",
+    "dev:setup": "convex dev --configure --until-success"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "^3.0.102",
+    "@convex-dev/agent": "catalog:",
+    "@convex-dev/better-auth": "catalog:",
+    "@convex-dev/polar": "catalog:",
+    "@polar-sh/sdk": "^0.47.0",
+    "ai": "^6.0.237",
+    "better-auth": "catalog:",
+    "convex": "catalog:",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@sandcastle/config": "workspace:*",
+    "@types/node": "^24.13.3",
+    "typescript": "catalog:"
+  }
+}
