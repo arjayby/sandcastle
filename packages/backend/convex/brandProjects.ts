@@ -1,6 +1,11 @@
+import {
+	paginationOptsValidator,
+	paginationResultValidator,
+} from "convex/server";
 import { ConvexError, v } from "convex/values";
 
-import { mutation, query } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
+import { type MutationCtx, mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
 
 const brandProjectValidator = v.object({
@@ -8,6 +13,7 @@ const brandProjectValidator = v.object({
 	_creationTime: v.number(),
 	ownerId: v.string(),
 	draftId: v.string(),
+	name: v.optional(v.string()),
 	companyName: v.string(),
 	description: v.string(),
 	updatedAt: v.number(),
@@ -31,6 +37,44 @@ function normalizeBrandBrief(companyName: string, description: string) {
 	}
 
 	return normalizedBrandBrief;
+}
+
+function normalizeProjectName(name: string) {
+	const normalizedName = name.trim();
+
+	if (!normalizedName) {
+		throw new ConvexError("A Brand Project name is required");
+	}
+
+	return normalizedName;
+}
+
+async function getOwnedBrandProject(
+	ctx: MutationCtx,
+	ownerId: string,
+	projectId: Id<"brandProjects">,
+) {
+	const project = await ctx.db.get(projectId);
+
+	if (!project || project.ownerId !== ownerId) {
+		throw new ConvexError("Brand Project not found");
+	}
+
+	return project;
+}
+
+function getCopyableBrandProjectData(project: Doc<"brandProjects">) {
+	const {
+		_id,
+		_creationTime,
+		ownerId,
+		draftId,
+		name,
+		updatedAt,
+		...copyableData
+	} = project;
+	void [_id, _creationTime, ownerId, draftId, name, updatedAt];
+	return copyableData;
 }
 
 export const create = mutation({
@@ -58,6 +102,7 @@ export const create = mutation({
 		return await ctx.db.insert("brandProjects", {
 			ownerId,
 			draftId: args.draftId,
+			name: brandBrief.companyName,
 			...brandBrief,
 			updatedAt: Date.now(),
 		});
@@ -65,15 +110,15 @@ export const create = mutation({
 });
 
 export const list = query({
-	args: {},
-	returns: v.array(brandProjectValidator),
-	handler: async (ctx) => {
+	args: { paginationOpts: paginationOptsValidator },
+	returns: paginationResultValidator(brandProjectValidator),
+	handler: async (ctx, { paginationOpts }) => {
 		const ownerId = await getOwnerId(ctx);
 		return await ctx.db
 			.query("brandProjects")
-			.withIndex("by_owner", (q) => q.eq("ownerId", ownerId))
+			.withIndex("by_owner_and_updated_at", (q) => q.eq("ownerId", ownerId))
 			.order("desc")
-			.take(100);
+			.paginate(paginationOpts);
 	},
 });
 
@@ -96,11 +141,7 @@ export const updateBrief = mutation({
 	returns: v.null(),
 	handler: async (ctx, { projectId, companyName, description }) => {
 		const ownerId = await getOwnerId(ctx);
-		const project = await ctx.db.get(projectId);
-
-		if (!project || project.ownerId !== ownerId) {
-			throw new ConvexError("Brand Project not found");
-		}
+		await getOwnedBrandProject(ctx, ownerId, projectId);
 
 		const brandBrief = normalizeBrandBrief(companyName, description);
 
@@ -109,6 +150,54 @@ export const updateBrief = mutation({
 			updatedAt: Date.now(),
 		});
 
+		return null;
+	},
+});
+
+export const rename = mutation({
+	args: {
+		projectId: v.id("brandProjects"),
+		name: v.string(),
+	},
+	returns: v.null(),
+	handler: async (ctx, { projectId, name }) => {
+		const ownerId = await getOwnerId(ctx);
+		await getOwnedBrandProject(ctx, ownerId, projectId);
+
+		await ctx.db.patch(projectId, {
+			name: normalizeProjectName(name),
+			updatedAt: Date.now(),
+		});
+
+		return null;
+	},
+});
+
+export const duplicate = mutation({
+	args: { projectId: v.id("brandProjects") },
+	returns: v.id("brandProjects"),
+	handler: async (ctx, { projectId }) => {
+		const ownerId = await getOwnerId(ctx);
+		const project = await getOwnedBrandProject(ctx, ownerId, projectId);
+
+		return await ctx.db.insert("brandProjects", {
+			...getCopyableBrandProjectData(project),
+			ownerId,
+			draftId: crypto.randomUUID(),
+			name: `${project.name ?? project.companyName} copy`,
+			updatedAt: Date.now(),
+		});
+	},
+});
+
+export const remove = mutation({
+	args: { projectId: v.id("brandProjects") },
+	returns: v.null(),
+	handler: async (ctx, { projectId }) => {
+		const ownerId = await getOwnerId(ctx);
+		await getOwnedBrandProject(ctx, ownerId, projectId);
+
+		await ctx.db.delete(projectId);
 		return null;
 	},
 });
