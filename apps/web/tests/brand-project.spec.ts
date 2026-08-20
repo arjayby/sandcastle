@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 
 const DESCRIPTION_GUIDANCE =
@@ -24,6 +25,9 @@ test("a Brand Builder can create, authenticate, reopen, and persist an owned Bra
   const otherOwnerEmail = `other-${runId}@example.com`;
   const password = "sandcastle-test-password";
   const companyName = `Northstar ${runId}`;
+  const expectedProjectSlug = companyName
+    .toLowerCase()
+    .replaceAll(/[^a-z0-9]+/g, "-");
   const description = "A planning tool for independent product teams.";
 
   await page.goto("/");
@@ -194,19 +198,173 @@ test("a Brand Builder can create, authenticate, reopen, and persist an owned Bra
     .getByLabel("JSON design tokens")
     .textContent();
   expect(() => JSON.parse(tokenJson ?? "")).not.toThrow();
+
+  await progressiveLogo
+    .getByRole("button", { name: "Inspect Logo Brand Region" })
+    .click();
+  const artifactInspector = page.getByRole("complementary", {
+    name: "Brand Region inspector",
+  });
+  const closeArtifactInspector = () =>
+    artifactInspector.getByRole("button", { name: "Close inspector" }).click();
+  const expectClipboard = (value: string) =>
+    expect
+      .poll(() => page.evaluate(() => navigator.clipboard.readText()))
+      .toBe(value);
+  for (const variant of ["Primary lockup", "Wordmark", "Symbol"]) {
+    await expect(
+      artifactInspector.getByRole("button", {
+        name: `Download ${variant} logo`,
+      }),
+    ).toBeVisible();
+  }
+  const [logoDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    artifactInspector
+      .getByRole("button", { name: "Download Primary lockup logo" })
+      .click(),
+  ]);
+  expect(logoDownload.suggestedFilename()).toBe(
+    `${expectedProjectSlug}-primary-lockup.svg`,
+  );
+  const logoDownloadPath = await logoDownload.path();
+  expect(logoDownloadPath).not.toBeNull();
+  if (logoDownloadPath) {
+    await expect(readFile(logoDownloadPath, "utf8")).resolves.toContain("<svg");
+  }
+  await expect(page.getByText("Primary lockup logo downloaded")).toBeVisible();
+  await closeArtifactInspector();
+
+  await progressivePhotography
+    .getByRole("button", { name: "Inspect Photography Brand Region" })
+    .click();
+  for (const role of [
+    "Hero",
+    "Product or service",
+    "People and culture",
+    "Texture or abstract",
+  ]) {
+    await expect(
+      artifactInspector.getByRole("button", {
+        name: `Download ${role} photograph`,
+      }),
+    ).toBeVisible();
+  }
+  const [photographDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    artifactInspector
+      .getByRole("button", { name: "Download Hero photograph" })
+      .click(),
+  ]);
+  expect(photographDownload.suggestedFilename()).toBe(
+    `${expectedProjectSlug}-hero-photograph.svg`,
+  );
+  const photographDownloadPath = await photographDownload.path();
+  expect(photographDownloadPath).not.toBeNull();
+  if (photographDownloadPath) {
+    await expect(readFile(photographDownloadPath, "utf8")).resolves.toContain(
+      "<svg",
+    );
+  }
+  await expect(page.getByText("Hero photograph downloaded")).toBeVisible();
+  await closeArtifactInspector();
+
+  await progressiveColor
+    .getByRole("button", { name: "Inspect Color Brand Region" })
+    .click();
+  await artifactInspector
+    .getByRole("button", { name: "Copy Signal Gold color value" })
+    .click();
+  await expectClipboard("#EDB33F");
+  await expect(page.getByText("Signal Gold color value copied")).toBeVisible();
+  await page.evaluate(() => {
+    const clipboard = navigator.clipboard;
+    const originalWriteText = clipboard.writeText;
+    Object.defineProperty(clipboard, "writeText", {
+      configurable: true,
+      value: () => Promise.reject(new Error("Clipboard permission denied")),
+    });
+    Object.defineProperty(window, "__restoreClipboardWriteText", {
+      configurable: true,
+      value: () =>
+        Object.defineProperty(clipboard, "writeText", {
+          configurable: true,
+          value: originalWriteText,
+        }),
+    });
+  });
+  const failingCopyButton = artifactInspector
+    .getByRole("button", { name: /^Copy .* color value$/ })
+    .first();
+  const failingCopyLabel = await failingCopyButton.getAttribute("aria-label");
+  expect(failingCopyLabel).not.toBeNull();
+  await failingCopyButton.click();
+  await expect(
+    page.getByText(
+      `Could not copy ${failingCopyLabel?.replace(/^Copy /, "").toLowerCase()}`,
+    ),
+  ).toBeVisible();
+  await page.evaluate(() => {
+    const testWindow = window as typeof window & {
+      __restoreClipboardWriteText?: () => void;
+    };
+    testWindow.__restoreClipboardWriteText?.();
+    delete testWindow.__restoreClipboardWriteText;
+  });
+  await closeArtifactInspector();
+
+  await progressiveTypography
+    .getByRole("button", { name: "Inspect Typography Brand Region" })
+    .click();
+  await artifactInspector
+    .getByRole("button", { name: "Copy Newsreader type value" })
+    .click();
+  await expectClipboard(
+    "Newsreader · display · weights 400, 600 · fallbacks Georgia, serif",
+  );
+  await artifactInspector
+    .getByRole("button", { name: "Copy sample headline" })
+    .click();
+  await expectClipboard("Find the clearest way forward.");
+  await closeArtifactInspector();
+
+  await progressiveVoice
+    .getByRole("button", { name: "Inspect Voice and Tone Brand Region" })
+    .click();
+  await artifactInspector
+    .getByRole("button", { name: "Copy principle 1" })
+    .click();
+  await expectClipboard("Clear, not clinical");
+  await closeArtifactInspector();
+
+  await progressiveInterface
+    .getByRole("button", {
+      name: "Inspect Interface Foundation Brand Region",
+    })
+    .click();
+  await artifactInspector
+    .getByRole("button", { name: "Copy interface body" })
+    .click();
+  await expectClipboard(
+    "Bring plans, decisions, and progress into one calm view your team can act on.",
+  );
+  await closeArtifactInspector();
+
   await progressiveTokens
     .getByRole("button", { name: "Inspect Design Tokens Brand Region" })
     .click();
   const tokenInspector = page.getByRole("complementary", {
     name: "Brand Region inspector",
   });
-  await tokenInspector.getByRole("button", { name: "Copy all CSS" }).click();
+  await tokenInspector.getByRole("button", { name: "Copy All CSS" }).click();
   await expect
     .poll(() => page.evaluate(() => navigator.clipboard.readText()))
     .toContain("--color-primary: #EDB33F");
-  await tokenInspector.getByRole("button", { name: "Copy all JSON" }).click();
+  await expect(page.getByText("CSS design tokens copied")).toBeVisible();
+  await tokenInspector.getByRole("button", { name: "Copy All JSON" }).click();
   const copiedJson = await page.evaluate(() => navigator.clipboard.readText());
   expect(() => JSON.parse(copiedJson)).not.toThrow();
+  await expect(page.getByText("JSON design tokens copied")).toBeVisible();
 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect(progressiveMotion.locator(".brand-motion-orbit")).toHaveCSS(
