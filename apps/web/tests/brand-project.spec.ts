@@ -76,6 +76,15 @@ test("a Brand Builder can create, authenticate, reopen, and persist an owned Bra
   const progressiveVoice = page.getByRole("button", {
     name: "Voice and Tone Brand Region",
   });
+  const progressiveMotion = page.getByRole("button", {
+    name: "Motion Brand Region",
+  });
+  const progressiveInterface = page.getByRole("button", {
+    name: "Interface Foundation Brand Region",
+  });
+  const progressiveTokens = page.getByRole("button", {
+    name: "Design Tokens Brand Region",
+  });
 
   await expect(progressiveLogo.getByText("Generating")).toBeVisible();
   await expect(progressiveColor.getByText("Unfinished")).toBeVisible();
@@ -86,6 +95,42 @@ test("a Brand Builder can create, authenticate, reopen, and persist an owned Bra
   await expect(progressiveTypography.getByText("Ready")).toBeVisible();
   await expect(progressiveVoice.getByText("Generating")).toBeVisible();
   await expect(progressiveVoice.getByText("Ready")).toBeVisible();
+  await expect(progressiveMotion.getByText("Generating")).toBeVisible();
+  await expect(progressiveInterface.getByText("Unfinished")).toBeVisible();
+  await expect(progressiveMotion.getByText("Ready")).toBeVisible();
+  await expect(progressiveInterface.getByText("Generating")).toBeVisible();
+  await expect(progressiveInterface.getByText("Ready")).toBeVisible();
+  await expect(progressiveTokens.getByText("Generating")).toBeVisible();
+  await expect(progressiveTokens.getByText("Ready")).toBeVisible();
+
+  await expect(progressiveMotion.getByText("320ms")).toBeVisible();
+  await expect(
+    progressiveMotion.getByText("cubic-bezier(0.22, 1, 0.36, 1)"),
+  ).toBeVisible();
+  await expect(
+    progressiveInterface.getByText("Find the clearest way forward."),
+  ).toBeVisible();
+  await expect(progressiveInterface.getByText("Email address")).toBeVisible();
+  await expect(
+    progressiveInterface.getByText("Approach", { exact: true }),
+  ).toBeVisible();
+  await expect(progressiveTokens.getByLabel("CSS design tokens")).toContainText(
+    "--color-primary: #EDB33F",
+  );
+  await expect(
+    progressiveTokens.getByLabel("JSON design tokens"),
+  ).toContainText('"spacing"');
+  const tokenJson = await progressiveTokens
+    .getByLabel("JSON design tokens")
+    .textContent();
+  expect(() => JSON.parse(tokenJson ?? "")).not.toThrow();
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(progressiveMotion.locator(".brand-motion-orbit")).toHaveCSS(
+    "animation-name",
+    "none",
+  );
+  await page.emulateMedia({ reducedMotion: "no-preference" });
 
   for (const regionName of REGION_NAMES) {
     await expect(
@@ -267,6 +312,11 @@ test("a Brand Builder can create, authenticate, reopen, and persist an owned Bra
   await page.reload();
   await expect(page.getByRole("heading", { name: companyName })).toBeVisible();
   await expect(page.getByText(description)).toBeVisible();
+  await expect(
+    page
+      .getByRole("button", { name: "Design Tokens Brand Region" })
+      .getByText("Ready"),
+  ).toBeVisible();
 
   await page.getByRole("button", { name: "Sign out" }).click();
   await page.goto("/dashboard");

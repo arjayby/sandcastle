@@ -9,7 +9,10 @@ import {
 import {
   brandDirectionSchema,
   colorGenerationSchema,
+  designTokensGenerationSchema,
+  interfaceGenerationSchema,
   logoGenerationSchema,
+  motionGenerationSchema,
   type ProgressiveRegionId,
   typographyGenerationSchema,
   voiceGenerationSchema,
@@ -22,6 +25,9 @@ const stageValidator = v.union(
   v.literal("color"),
   v.literal("typography"),
   v.literal("voice-and-tone"),
+  v.literal("motion"),
+  v.literal("interface-foundation"),
+  v.literal("design-tokens"),
   v.literal("ready"),
   v.literal("failed"),
 );
@@ -31,6 +37,9 @@ const regionValidator = v.union(
   v.literal("color"),
   v.literal("typography"),
   v.literal("voice-and-tone"),
+  v.literal("motion"),
+  v.literal("interface-foundation"),
+  v.literal("design-tokens"),
 );
 
 const generationContextValidator = v.object({
@@ -50,6 +59,12 @@ function schemaForRegion(region: ProgressiveRegionId) {
       return typographyGenerationSchema;
     case "voice-and-tone":
       return voiceGenerationSchema;
+    case "motion":
+      return motionGenerationSchema;
+    case "interface-foundation":
+      return interfaceGenerationSchema;
+    case "design-tokens":
+      return designTokensGenerationSchema;
   }
 }
 
@@ -94,11 +109,22 @@ export const saveRegion = internalMutation({
   returns: v.null(),
   handler: async (ctx, { projectId, region, resultJson, nextStage }) => {
     schemaForRegion(region).parse(JSON.parse(resultJson));
-    const field = `${region === "voice-and-tone" ? "voice" : region}Json` as
+    const field = `${
+      region === "voice-and-tone"
+        ? "voice"
+        : region === "interface-foundation"
+          ? "interface"
+          : region === "design-tokens"
+            ? "designTokens"
+            : region
+    }Json` as
       | "logoJson"
       | "colorJson"
       | "typographyJson"
-      | "voiceJson";
+      | "voiceJson"
+      | "motionJson"
+      | "interfaceJson"
+      | "designTokensJson";
     await ctx.db.patch(projectId, {
       [field]: resultJson,
       generationStage: nextStage,
@@ -147,34 +173,78 @@ export const generate = internalAction({
       });
 
       const directedContext = { ...context, direction };
-      const slices = [
-        ["logo", "color", () => provider.createLogo(ctx, directedContext)],
-        [
-          "color",
-          "typography",
-          () => provider.createColor(ctx, directedContext),
-        ],
-        [
-          "typography",
-          "voice-and-tone",
-          () => provider.createTypography(ctx, directedContext),
-        ],
-        [
-          "voice-and-tone",
-          "ready",
-          () => provider.createVoice(ctx, directedContext),
-        ],
-      ] as const;
-
-      for (const [region, nextStage, createResult] of slices) {
-        const result = schemaForRegion(region).parse(await createResult());
+      const save = async (
+        region: ProgressiveRegionId,
+        nextStage:
+          | "color"
+          | "typography"
+          | "voice-and-tone"
+          | "motion"
+          | "interface-foundation"
+          | "design-tokens"
+          | "ready",
+        result: unknown,
+      ) => {
+        const validatedResult = schemaForRegion(region).parse(result);
         await ctx.runMutation(internal.brandGeneration.saveRegion, {
           projectId,
           region,
-          resultJson: JSON.stringify(result),
+          resultJson: JSON.stringify(validatedResult),
           nextStage,
         });
-      }
+        return validatedResult;
+      };
+
+      await save(
+        "logo",
+        "color",
+        await provider.createLogo(ctx, directedContext),
+      );
+      const color = colorGenerationSchema.parse(
+        await save(
+          "color",
+          "typography",
+          await provider.createColor(ctx, directedContext),
+        ),
+      );
+      const typography = typographyGenerationSchema.parse(
+        await save(
+          "typography",
+          "voice-and-tone",
+          await provider.createTypography(ctx, directedContext),
+        ),
+      );
+      const voice = voiceGenerationSchema.parse(
+        await save(
+          "voice-and-tone",
+          "motion",
+          await provider.createVoice(ctx, directedContext),
+        ),
+      );
+      const motion = motionGenerationSchema.parse(
+        await save(
+          "motion",
+          "interface-foundation",
+          await provider.createMotion(ctx, directedContext),
+        ),
+      );
+      const appliedContext = {
+        ...directedContext,
+        color,
+        typography,
+        voice,
+        motion,
+      };
+      await save(
+        "interface-foundation",
+        "design-tokens",
+        await provider.createInterface(ctx, appliedContext),
+      );
+      await save(
+        "design-tokens",
+        "ready",
+        await provider.createDesignTokens(ctx, appliedContext),
+      );
     } catch (error) {
       await ctx.runMutation(internal.brandGeneration.markFailed, {
         projectId,

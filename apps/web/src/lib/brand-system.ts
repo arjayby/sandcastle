@@ -1,8 +1,11 @@
 import {
   brandDirectionSchema,
   colorGenerationSchema,
+  designTokensGenerationSchema,
+  interfaceGenerationSchema,
   logoGenerationContentSchema,
   logoGenerationSchema,
+  motionGenerationSchema,
   typographyGenerationSchema,
   voiceGenerationSchema,
 } from "@sandcastle/backend/convex/brandGenerationContract";
@@ -85,40 +88,36 @@ const motionRegionSchema = z.object({
   ...sharedRegionShape,
   id: z.literal("motion"),
   name: z.literal("Motion"),
-  content: z.object({
-    principle: z.string().min(1),
-    duration: z.string().min(1),
-    easing: z.string().min(1),
-  }),
+  content: motionGenerationSchema.omit({ summary: true, rules: true }),
 });
 
 const interfaceRegionSchema = z.object({
   ...sharedRegionShape,
   id: z.literal("interface-foundation"),
   name: z.literal("Interface Foundation"),
-  content: z.object({
-    principle: z.string().min(1),
-    components: z.array(z.string().min(1)).min(5),
-    example: z.object({
-      brandName: z.string().min(1),
-      headline: z.string().min(1),
-      callToAction: z.string().min(1),
-      cardTitle: z.string().min(1),
-      cardDescription: z.string().min(1),
-      inputPlaceholder: z.string().min(1),
-      actionLabel: z.string().min(1),
-    }),
-  }),
+  content: interfaceGenerationSchema.omit({ summary: true, rules: true }),
 });
 
 const designTokensRegionSchema = z.object({
   ...sharedRegionShape,
   id: z.literal("design-tokens"),
   name: z.literal("Design Tokens"),
-  content: z.object({
-    css: z.string().min(1),
-    json: z.record(z.string(), z.string()),
-  }),
+  content: designTokensGenerationSchema
+    .omit({ summary: true, rules: true })
+    .extend({
+      css: z.string().min(1),
+      json: z
+        .string()
+        .min(1)
+        .refine((value) => {
+          try {
+            JSON.parse(value);
+            return true;
+          } catch {
+            return false;
+          }
+        }, "Design token JSON must be valid"),
+    }),
 });
 
 export const brandSystemSchema = z.object({
@@ -183,6 +182,33 @@ const fallbackMotion = {
 const fallbackCardRadius = "12px";
 const fallbackLogoSvg =
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 80"><title>Morrow mark</title><path fill="#17231F" d="M12 12h56v56H12zM88 24h136v12H88zM88 48h104v10H88z"/></svg>';
+
+type DesignTokenValues = Omit<
+  z.infer<typeof designTokensGenerationSchema>,
+  "summary" | "rules"
+>;
+
+function tokenDeclarations(prefix: string, tokens: Record<string, string>) {
+  return Object.entries(tokens).map(
+    ([name, value]) => `  --${prefix}-${name}: ${value};`,
+  );
+}
+
+export function createDesignTokenArtifacts(tokens: DesignTokenValues) {
+  const css = [
+    ":root {",
+    ...tokenDeclarations("color", tokens.colors),
+    ...tokenDeclarations("font", tokens.fonts),
+    ...tokenDeclarations("type", tokens.typeScale),
+    ...tokenDeclarations("spacing", tokens.spacing),
+    ...tokenDeclarations("radius", tokens.radius),
+    ...tokenDeclarations("shadow", tokens.shadows),
+    ...tokenDeclarations("motion", tokens.motion),
+    "}",
+  ].join("\n");
+
+  return { css, json: JSON.stringify(tokens, null, 2) };
+}
 
 export function createFallbackBrandSystem(projectName: string): BrandSystem {
   return brandSystemSchema.parse({
@@ -408,11 +434,14 @@ export function createFallbackBrandSystem(projectName: string): BrandSystem {
           example: {
             brandName: "Morrow",
             headline: "Build what matters.",
+            body: "Bring plans and progress into one calm view.",
             callToAction: "Find your next step",
+            secondaryAction: "See the approach",
             cardTitle: "Project rhythm",
             cardDescription: "A calm weekly overview.",
-            inputPlaceholder: "Search projects",
-            actionLabel: "Create project",
+            inputLabel: "Email address",
+            inputPlaceholder: "you@example.com",
+            navigation: ["Approach", "Work", "About"],
           },
         },
       },
@@ -427,16 +456,27 @@ export function createFallbackBrandSystem(projectName: string): BrandSystem {
           "Use the spacing scale before introducing a new measurement.",
           "Motion values always inherit the reduced motion policy.",
         ],
-        content: {
-          css: `:root {\n  --color-ink: ${fallbackTheme.ink};\n  --color-saffron: ${fallbackTheme.saffron};\n  --font-display: ${fallbackTypography.display};\n  --radius-card: ${fallbackCardRadius};\n  --motion-standard: ${fallbackMotion.duration};\n}`,
-          json: {
-            "color.ink": fallbackTheme.ink,
-            "color.saffron": fallbackTheme.saffron,
-            "font.display": fallbackTypography.display,
-            "radius.card": fallbackCardRadius,
-            "motion.standard": fallbackMotion.duration,
-          },
-        },
+        content: (() => {
+          const tokens = {
+            colors: {
+              ink: fallbackTheme.ink,
+              primary: fallbackTheme.saffron,
+              support: fallbackTheme.aloe,
+              accent: fallbackTheme.clay,
+              surface: fallbackTheme.paper,
+            },
+            fonts: {
+              display: `"${fallbackTypography.display}", Georgia, serif`,
+              body: `"${fallbackTypography.body}", Arial, sans-serif`,
+            },
+            typeScale: { display: "72px", heading: "36px", body: "18px" },
+            spacing: { small: "8px", medium: "16px", large: "32px" },
+            radius: { control: "8px", card: fallbackCardRadius },
+            shadows: { card: "0 18px 50px rgba(23, 35, 31, 0.12)" },
+            motion: fallbackMotion,
+          };
+          return { ...tokens, ...createDesignTokenArtifacts(tokens) };
+        })(),
       },
     ],
   });
@@ -449,6 +489,11 @@ export type ProgressiveGenerationData = {
     | "color"
     | "typography"
     | "voice-and-tone"
+    | "photography-direction"
+    | "photography"
+    | "motion"
+    | "interface-foundation"
+    | "design-tokens"
     | "ready"
     | "failed";
   generationError?: string;
@@ -457,6 +502,9 @@ export type ProgressiveGenerationData = {
   colorJson?: string;
   typographyJson?: string;
   voiceJson?: string;
+  motionJson?: string;
+  interfaceJson?: string;
+  designTokensJson?: string;
 };
 
 function parseJson<Schema extends z.ZodType>(
@@ -475,7 +523,14 @@ function parseJson<Schema extends z.ZodType>(
 }
 
 function progressiveState(
-  id: "logo" | "color" | "typography" | "voice-and-tone",
+  id:
+    | "logo"
+    | "color"
+    | "typography"
+    | "voice-and-tone"
+    | "motion"
+    | "interface-foundation"
+    | "design-tokens",
   stage: ProgressiveGenerationData["generationStage"],
   hasResult: boolean,
   hasError: boolean,
@@ -506,6 +561,15 @@ export function createProgressiveBrandSystem(
     typographyGenerationSchema,
   );
   const voice = parseJson(generation.voiceJson, voiceGenerationSchema);
+  const motion = parseJson(generation.motionJson, motionGenerationSchema);
+  const interfaceFoundation = parseJson(
+    generation.interfaceJson,
+    interfaceGenerationSchema,
+  );
+  const designTokens = parseJson(
+    generation.designTokensJson,
+    designTokensGenerationSchema,
+  );
 
   const regions = fallback.regions.map((region): BrandRegion => {
     switch (region.id) {
@@ -581,6 +645,61 @@ export function createProgressiveBrandSystem(
             ? { summary: voice.summary, rules: voice.rules, content: voice }
             : {}),
         };
+      case "motion":
+        return {
+          ...region,
+          state: progressiveState(
+            "motion",
+            generation.generationStage,
+            !!motion,
+            !!generation.generationError,
+          ),
+          ...(motion
+            ? {
+                summary: motion.summary,
+                rules: motion.rules,
+                content: motion,
+              }
+            : {}),
+        };
+      case "interface-foundation":
+        return {
+          ...region,
+          state: progressiveState(
+            "interface-foundation",
+            generation.generationStage,
+            !!interfaceFoundation,
+            !!generation.generationError,
+          ),
+          ...(interfaceFoundation
+            ? {
+                summary: interfaceFoundation.summary,
+                rules: interfaceFoundation.rules,
+                content: interfaceFoundation,
+              }
+            : {}),
+        };
+      case "design-tokens": {
+        const artifacts = designTokens
+          ? createDesignTokenArtifacts(designTokens)
+          : null;
+        return {
+          ...region,
+          state: progressiveState(
+            "design-tokens",
+            generation.generationStage,
+            !!designTokens,
+            !!generation.generationError,
+          ),
+          ...(designTokens && artifacts
+            ? {
+                summary: designTokens.summary,
+                rules: designTokens.rules,
+                content: { ...designTokens, ...artifacts },
+              }
+            : {}),
+        };
+      }
       default:
         return region;
     }

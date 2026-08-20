@@ -16,6 +16,11 @@ export default defineSchema({
         v.literal("color"),
         v.literal("typography"),
         v.literal("voice-and-tone"),
+        v.literal("photography-direction"),
+        v.literal("photography"),
+        v.literal("motion"),
+        v.literal("interface-foundation"),
+        v.literal("design-tokens"),
         v.literal("ready"),
         v.literal("failed"),
       ),
@@ -26,7 +31,31 @@ export default defineSchema({
     colorJson: v.optional(v.string()),
     typographyJson: v.optional(v.string()),
     voiceJson: v.optional(v.string()),
+    photographyDirectionJson: v.optional(v.string()),
+    motionJson: v.optional(v.string()),
+    interfaceJson: v.optional(v.string()),
+    designTokensJson: v.optional(v.string()),
   })
     .index("by_owner_and_updated_at", ["ownerId", "updatedAt"])
     .index("by_owner_and_draft", ["ownerId", "draftId"]),
+  brandPhotographs: defineTable({
+    projectId: v.id("brandProjects"),
+    role: v.union(
+      v.literal("hero"),
+      v.literal("product"),
+      v.literal("people"),
+      v.literal("texture"),
+    ),
+    state: v.union(
+      v.literal("generating"),
+      v.literal("ready"),
+      v.literal("failed"),
+    ),
+    alt: v.string(),
+    storageId: v.optional(v.id("_storage")),
+    mediaType: v.optional(v.string()),
+    error: v.optional(v.string()),
+  })
+    .index("by_project_and_role", ["projectId", "role"])
+    .index("by_storage_id", ["storageId"]),
 });

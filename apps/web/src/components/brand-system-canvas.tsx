@@ -113,6 +113,25 @@ function RegionDetails({ region }: { region: BrandRegion }) {
           <p>{region.content.beforeAfter.after}</p>
         </div>
       );
+    case "design-tokens":
+      return (
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigator.clipboard.writeText(region.content.css)}
+          >
+            Copy all CSS
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigator.clipboard.writeText(region.content.json)}
+          >
+            Copy all JSON
+          </Button>
+        </div>
+      );
     default:
       return null;
   }
@@ -157,8 +176,13 @@ export default function BrandSystemCanvas({
   const motionRegion = brandSystem.regions.find(
     (region) => region.id === "motion",
   );
-  if (!(typographyRegion && motionRegion)) {
-    throw new Error("Brand System typography and motion regions are required");
+  const designTokensRegion = brandSystem.regions.find(
+    (region) => region.id === "design-tokens",
+  );
+  if (!(typographyRegion && motionRegion && designTokensRegion)) {
+    throw new Error(
+      "Brand System typography, motion, and design token regions are required",
+    );
   }
   const brandThemeStyle = {
     "--brand-ink": brandSystem.theme.ink,
@@ -172,6 +196,12 @@ export default function BrandSystemCanvas({
     "--brand-font-body": `"${typographyRegion.content.body}", ${typographyRegion.content.bodyFallbacks.join(", ")}`,
     "--brand-motion-duration": motionRegion.content.duration,
     "--brand-motion-easing": motionRegion.content.easing,
+    "--brand-spacing-small": designTokensRegion.content.spacing.small,
+    "--brand-spacing-medium": designTokensRegion.content.spacing.medium,
+    "--brand-spacing-large": designTokensRegion.content.spacing.large,
+    "--brand-radius-control": designTokensRegion.content.radius.control,
+    "--brand-radius-card": designTokensRegion.content.radius.card,
+    "--brand-shadow-card": designTokensRegion.content.shadows.card,
     fontFamily: "var(--brand-font-body)",
   } as CSSProperties;
 

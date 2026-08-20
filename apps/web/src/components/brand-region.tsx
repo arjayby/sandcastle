@@ -218,7 +218,11 @@ function MotionRegion({
   return (
     <div className="flex h-full flex-col overflow-hidden bg-[var(--brand-aloe)]/45 p-7">
       <RegionLabel region={region} />
-      <div className="relative my-5 flex flex-1 items-center justify-center overflow-hidden rounded-[50%] bg-[var(--brand-ink)]">
+      <div
+        role="img"
+        aria-label={`${region.content.principle} live motion expression`}
+        className="relative my-5 flex flex-1 items-center justify-center overflow-hidden rounded-[50%] bg-[var(--brand-ink)]"
+      >
         <div className="brand-motion-orbit size-32 rounded-[42%_58%_55%_45%] bg-[var(--brand-saffron)]" />
         <div className="absolute size-5 rounded-full bg-[var(--brand-clay)]" />
       </div>
@@ -247,21 +251,39 @@ function InterfaceRegion({
 }) {
   return (
     <div className="grid h-full grid-cols-[0.68fr_1.32fr] bg-[var(--brand-paper)]">
-      <div className="flex flex-col justify-between bg-[var(--brand-saffron)] p-8 text-[var(--brand-ink)]">
-        <p className="font-semibold text-xs uppercase tracking-[0.16em]">
-          {region.content.example.brandName}
-        </p>
-        <p className="brand-display text-5xl leading-none">
-          {region.content.example.headline}
-        </p>
-        <span className="w-fit bg-[var(--brand-ink)] px-5 py-3 font-semibold text-[var(--brand-paper)] text-xs">
-          {region.content.example.callToAction}
-        </span>
+      <div className="flex flex-col gap-[var(--brand-spacing-medium)] bg-[var(--brand-saffron)] p-[var(--brand-spacing-large)] text-[var(--brand-ink)]">
+        <nav
+          aria-label={`${region.content.example.brandName} example navigation`}
+          className="flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.14em]"
+        >
+          <strong>{region.content.example.brandName}</strong>
+          <span className="flex gap-3">
+            {region.content.example.navigation.map((item) => (
+              <span key={item}>{item}</span>
+            ))}
+          </span>
+        </nav>
+        <div className="my-auto flex flex-col gap-[var(--brand-spacing-medium)]">
+          <p className="brand-display text-5xl leading-none">
+            {region.content.example.headline}
+          </p>
+          <p className="max-w-80 text-xs leading-relaxed">
+            {region.content.example.body}
+          </p>
+          <div className="flex gap-[var(--brand-spacing-small)]">
+            <span className="rounded-[var(--brand-radius-control)] bg-[var(--brand-ink)] px-4 py-2 font-semibold text-[var(--brand-paper)] text-xs">
+              {region.content.example.callToAction}
+            </span>
+            <span className="rounded-[var(--brand-radius-control)] border border-[var(--brand-ink)]/30 px-4 py-2 font-semibold text-xs">
+              {region.content.example.secondaryAction}
+            </span>
+          </div>
+        </div>
       </div>
       <div className="flex flex-col p-7">
         <RegionLabel region={region} />
         <div className="mt-auto grid grid-cols-2 gap-3">
-          <div className="border border-[var(--brand-ink)]/15 bg-white p-4">
+          <div className="rounded-[var(--brand-radius-card)] border border-[var(--brand-ink)]/15 bg-white p-4 shadow-[var(--brand-shadow-card)]">
             <p className="brand-display text-2xl text-[var(--brand-ink)]">
               {region.content.example.cardTitle}
             </p>
@@ -270,11 +292,14 @@ function InterfaceRegion({
             </p>
           </div>
           <div className="flex flex-col gap-2">
-            <div className="border border-[var(--brand-ink)]/25 bg-white px-3 py-2 text-[var(--brand-muted)] text-xs">
-              {region.content.example.inputPlaceholder}
+            <div className="font-medium text-[10px] text-[var(--brand-ink)]">
+              <p>{region.content.example.inputLabel}</p>
+              <span className="mt-1 block rounded-[var(--brand-radius-control)] border border-[var(--brand-ink)]/25 bg-white px-3 py-2 font-normal text-[var(--brand-muted)] text-xs">
+                {region.content.example.inputPlaceholder}
+              </span>
             </div>
-            <div className="bg-[var(--brand-ink)] px-3 py-2 text-center text-[var(--brand-paper)] text-xs">
-              {region.content.example.actionLabel}
+            <div className="rounded-[var(--brand-radius-control)] bg-[var(--brand-ink)] px-3 py-2 text-center text-[var(--brand-paper)] text-xs">
+              {region.content.example.callToAction}
             </div>
           </div>
         </div>
@@ -289,8 +314,8 @@ function DesignTokensRegion({
   region: Extract<BrandRegion, { id: "design-tokens" }>;
 }) {
   return (
-    <div className="grid h-full grid-cols-[0.78fr_1.22fr] bg-[var(--brand-ink)] p-7 text-[var(--brand-paper)]">
-      <div className="flex flex-col justify-between border-white/15 border-r pr-6">
+    <div className="grid h-full grid-cols-[0.64fr_1.36fr] bg-[var(--brand-ink)] p-7 text-[var(--brand-paper)]">
+      <div className="flex flex-col justify-between border-white/15 border-r pr-5">
         <div>
           <p className="text-[10px] text-[var(--brand-aloe)] uppercase tracking-[0.18em]">
             Brand Region
@@ -301,9 +326,21 @@ function DesignTokensRegion({
           CSS · JSON · Ready for production
         </p>
       </div>
-      <pre className="overflow-hidden pl-7 font-mono text-[var(--brand-aloe)] text-xs leading-6">
-        <code>{region.content.css}</code>
-      </pre>
+      <div className="grid min-w-0 grid-cols-2 gap-4 overflow-hidden pl-5">
+        <section aria-label="CSS design tokens" className="overflow-hidden">
+          <pre className="font-mono text-[9px] text-[var(--brand-aloe)] leading-4">
+            <code>{region.content.css}</code>
+          </pre>
+        </section>
+        <section
+          aria-label="JSON design tokens"
+          className="overflow-hidden border-white/15 border-l pl-4"
+        >
+          <pre className="font-mono text-[9px] text-[var(--brand-aloe)] leading-4">
+            <code>{region.content.json}</code>
+          </pre>
+        </section>
+      </div>
     </div>
   );
 }

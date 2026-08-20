@@ -3,6 +3,19 @@ import { z } from "zod";
 const hexColorSchema = z.string().regex(/^#[0-9A-F]{6}$/);
 
 const nonEmptyStringArray = z.array(z.string().trim().min(1)).min(1);
+const tokenNameSchema = z.string().regex(/^[a-z][a-z0-9-]*$/);
+const cssDurationSchema = z
+  .string()
+  .regex(/^\d+(?:\.\d+)?m?s$/, "Motion duration must be a CSS time value");
+const cssEasingSchema = z
+  .string()
+  .regex(
+    /^cubic-bezier\(\s*-?(?:\d+|\d*\.\d+)\s*,\s*-?(?:\d+|\d*\.\d+)\s*,\s*-?(?:\d+|\d*\.\d+)\s*,\s*-?(?:\d+|\d*\.\d+)\s*\)$/,
+    "Motion easing must be a CSS cubic-bezier value",
+  );
+const tokenRecordSchema = z
+  .record(tokenNameSchema, z.string().trim().min(1))
+  .refine((tokens) => Object.keys(tokens).length > 0, "Tokens are required");
 
 const googleFontStylesheetSchema = z
   .url()
@@ -131,17 +144,75 @@ export const voiceGenerationSchema = z.object({
   }),
 });
 
+export const motionGenerationSchema = z.object({
+  summary: z.string().trim().min(1),
+  rules: nonEmptyStringArray,
+  principle: z.string().trim().min(1),
+  duration: cssDurationSchema,
+  easing: cssEasingSchema,
+});
+
+export const interfaceGenerationSchema = z.object({
+  summary: z.string().trim().min(1),
+  rules: nonEmptyStringArray,
+  principle: z.string().trim().min(1),
+  components: z.array(z.string().trim().min(1)).min(5),
+  example: z.object({
+    brandName: z.string().trim().min(1),
+    headline: z.string().trim().min(1),
+    body: z.string().trim().min(1),
+    callToAction: z.string().trim().min(1),
+    secondaryAction: z.string().trim().min(1),
+    cardTitle: z.string().trim().min(1),
+    cardDescription: z.string().trim().min(1),
+    inputLabel: z.string().trim().min(1),
+    inputPlaceholder: z.string().trim().min(1),
+    navigation: z.array(z.string().trim().min(1)).length(3),
+  }),
+});
+
+export const designTokensGenerationSchema = z.object({
+  summary: z.string().trim().min(1),
+  rules: nonEmptyStringArray,
+  colors: z
+    .record(tokenNameSchema, hexColorSchema)
+    .refine(
+      (tokens) => Object.keys(tokens).length >= 5,
+      "At least five color tokens are required",
+    ),
+  fonts: z.object({
+    display: z.string().trim().min(1),
+    body: z.string().trim().min(1),
+  }),
+  typeScale: tokenRecordSchema,
+  spacing: tokenRecordSchema,
+  radius: tokenRecordSchema,
+  shadows: tokenRecordSchema,
+  motion: z.object({
+    duration: cssDurationSchema,
+    easing: cssEasingSchema,
+  }),
+});
+
 export type BrandDirection = z.infer<typeof brandDirectionSchema>;
 export type LogoGeneration = z.infer<typeof logoGenerationSchema>;
 export type ColorGeneration = z.infer<typeof colorGenerationSchema>;
 export type TypographyGeneration = z.infer<typeof typographyGenerationSchema>;
 export type VoiceGeneration = z.infer<typeof voiceGenerationSchema>;
+export type MotionGeneration = z.infer<typeof motionGenerationSchema>;
+export type InterfaceGeneration = z.infer<typeof interfaceGenerationSchema>;
+export type DesignTokensGeneration = z.infer<
+  typeof designTokensGenerationSchema
+>;
 
 export const progressiveRegionIds = [
   "logo",
   "color",
   "typography",
   "voice-and-tone",
+  "motion",
+  "interface-foundation",
+  "design-tokens",
 ] as const;
 
 export type ProgressiveRegionId = (typeof progressiveRegionIds)[number];

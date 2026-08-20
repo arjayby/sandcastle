@@ -1,5 +1,8 @@
 import {
+  designTokensGenerationSchema,
+  interfaceGenerationSchema,
   logoGenerationSchema,
+  motionGenerationSchema,
   sanitizeGeneratedSvg,
   validateTypographyWithGoogleFonts,
 } from "@sandcastle/backend/convex/brandGenerationContract";
@@ -138,5 +141,80 @@ describe("Google Fonts generation contract", () => {
     await expect(validateTypographyWithGoogleFonts(typography)).rejects.toThrow(
       "Newsreader weight 600",
     );
+  });
+});
+
+describe("applied Brand Region generation contract", () => {
+  test("accepts practical motion, interface, and design token results", () => {
+    expect(
+      motionGenerationSchema.parse({
+        summary: "Measured motion that confirms progress.",
+        rules: ["Movement arrives softly."],
+        principle: "Lift, travel, settle",
+        duration: "320ms",
+        easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+      }),
+    ).toBeDefined();
+
+    expect(
+      interfaceGenerationSchema.parse({
+        summary: "Calm surfaces with direct controls.",
+        rules: ["Reserve the accent color for primary actions."],
+        principle: "Editorial calm, product clarity",
+        components: ["Buttons", "Inputs", "Cards", "Navigation", "Website"],
+        example: {
+          brandName: "Northstar",
+          headline: "Find the clearest way forward.",
+          body: "Bring plans and progress into one calm view.",
+          callToAction: "Set your direction",
+          secondaryAction: "See the approach",
+          cardTitle: "Project rhythm",
+          cardDescription: "A calm weekly overview.",
+          inputLabel: "Email address",
+          inputPlaceholder: "you@example.com",
+          navigation: ["Approach", "Work", "About"],
+        },
+      }),
+    ).toBeDefined();
+
+    expect(
+      designTokensGenerationSchema.parse({
+        summary: "Production values for every application.",
+        rules: ["Use tokens as the interface source of truth."],
+        colors: {
+          ink: "#17231F",
+          primary: "#EDB33F",
+          support: "#B7CEB7",
+          accent: "#D57658",
+          surface: "#F4EFE5",
+        },
+        fonts: {
+          display: "Newsreader, Georgia, serif",
+          body: "Inter, Arial, sans-serif",
+        },
+        typeScale: { display: "72px", heading: "36px", body: "18px" },
+        spacing: { small: "8px", medium: "16px", large: "32px" },
+        radius: { control: "8px", card: "12px" },
+        shadows: {
+          card: "0 18px 50px rgba(23, 35, 31, 0.12)",
+        },
+        motion: {
+          duration: "320ms",
+          easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+        },
+      }),
+    ).toBeDefined();
+  });
+
+  test("rejects motion values that are not suitable CSS interface tokens", () => {
+    expect(() =>
+      motionGenerationSchema.parse({
+        summary: "Motion without practical values.",
+        rules: ["Move quickly."],
+        principle: "Bounce forever",
+        duration: "eventually",
+        easing: "springy",
+      }),
+    ).toThrow();
   });
 });

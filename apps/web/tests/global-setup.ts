@@ -24,10 +24,16 @@ export default function useControlledBrandAgent() {
   const previousValue = configuredVariables.has(variableName)
     ? convexEnv(["get", variableName])
     : null;
+  const needsUpdate = previousValue !== "controlled";
 
-  convexEnv(["set", variableName, "controlled"]);
+  if (needsUpdate) {
+    convexEnv(["set", variableName, "controlled"]);
+  }
 
   return () => {
+    if (!needsUpdate) {
+      return;
+    }
     if (previousValue === null) {
       convexEnv(["remove", variableName]);
       return;
