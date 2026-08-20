@@ -1,10 +1,14 @@
 import { Button, buttonVariants } from "@sandcastle/ui/components/button";
 import { Separator } from "@sandcastle/ui/components/separator";
+import { Spinner } from "@sandcastle/ui/components/spinner";
 import { cn } from "@sandcastle/ui/lib/utils";
 import { Link } from "@tanstack/react-router";
 import {
+  CopyIcon,
+  DownloadIcon,
   FocusIcon,
   LogOutIcon,
+  type LucideIcon,
   MinusIcon,
   ScanIcon,
   XIcon,
@@ -20,8 +24,14 @@ import {
   useRef,
   useState,
 } from "react";
+import { toast } from "sonner";
 
 import BrandRegionCard from "@/components/brand-region";
+import {
+  copyBrandArtifact,
+  downloadBrandPhotograph,
+  downloadLogo,
+} from "@/lib/brand-artifact-actions";
 import {
   type BrandRegion,
   createProgressiveBrandSystem,
@@ -52,14 +62,141 @@ function clampScale(scale: number) {
   return Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale));
 }
 
-function RegionDetails({ region }: { region: BrandRegion }) {
+function ArtifactActionButton({
+  label,
+  successMessage,
+  errorMessage,
+  icon: Icon,
+  onAction,
+  disabled = false,
+  children,
+}: {
+  label: string;
+  successMessage: string;
+  errorMessage: string;
+  icon: LucideIcon;
+  onAction: () => void | Promise<void>;
+  disabled?: boolean;
+  children: React.ReactNode;
+}) {
+  const [isPending, setIsPending] = useState(false);
+
+  async function handleAction() {
+    setIsPending(true);
+    try {
+      await onAction();
+      toast.success(successMessage);
+    } catch {
+      toast.error(errorMessage);
+    } finally {
+      setIsPending(false);
+    }
+  }
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      aria-label={label}
+      disabled={disabled || isPending}
+      onClick={handleAction}
+    >
+      {isPending ? (
+        <Spinner data-icon="inline-start" />
+      ) : (
+        <Icon data-icon="inline-start" />
+      )}
+      {children}
+    </Button>
+  );
+}
+
+function CopyArtifactButton({
+  label,
+  value,
+  successMessage,
+  children = "Copy",
+}: {
+  label: string;
+  value: string;
+  successMessage?: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <ArtifactActionButton
+      label={label}
+      successMessage={successMessage ?? `${label.replace(/^Copy /, "")} copied`}
+      errorMessage={`Could not copy ${label.replace(/^Copy /, "").toLowerCase()}`}
+      icon={CopyIcon}
+      onAction={() => copyBrandArtifact(value)}
+    >
+      {children}
+    </ArtifactActionButton>
+  );
+}
+
+function CopyArtifactList({
+  artifacts,
+}: {
+  artifacts: Array<{ label: string; value: string }>;
+}) {
+  return (
+    <div className="mt-4 flex flex-col gap-2 text-xs">
+      {artifacts.map((artifact) => (
+        <div
+          key={artifact.label}
+          className="grid grid-cols-[1fr_auto] items-center gap-2"
+        >
+          <p>
+            <strong>{artifact.label}:</strong> {artifact.value}
+          </p>
+          <CopyArtifactButton
+            label={`Copy ${artifact.label.toLowerCase()}`}
+            value={artifact.value}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function RegionDetails({
+  region,
+  projectName,
+}: {
+  region: BrandRegion;
+  projectName: string;
+}) {
   switch (region.id) {
-    case "logo":
+    case "logo": {
+      const variants = [
+        ["Primary lockup", region.content.primaryLockupSvg],
+        ["Wordmark", region.content.wordmarkSvg],
+        ["Symbol", region.content.symbolSvg],
+      ] as const;
       return (
-        <p className="mt-4 text-muted-foreground text-xs">
-          Primary lockup · Wordmark · Symbol
-        </p>
+        <div className="mt-4 flex flex-col gap-2">
+          {variants.map(([name, svg]) => (
+            <ArtifactActionButton
+              key={name}
+              label={`Download ${name} logo`}
+              successMessage={`${name} logo downloaded`}
+              errorMessage={`Could not download ${name.toLowerCase()} logo`}
+              icon={DownloadIcon}
+              onAction={() => downloadLogo(projectName, name, svg)}
+            >
+              Download {name}
+            </ArtifactActionButton>
+          ))}
+          <CopyArtifactButton
+            label="Copy logo tagline"
+            value={region.content.tagline}
+          >
+            Copy tagline
+          </CopyArtifactButton>
+        </div>
       );
+    }
     case "color":
       return (
         <ul className="mt-4 flex flex-col gap-2 text-xs">
@@ -68,10 +205,15 @@ function RegionDetails({ region }: { region: BrandRegion }) {
               <span>
                 <strong>{color.name}</strong> · {color.role}
                 <span className="block text-muted-foreground">
-                  {color.usage}
+                  {color.usage} · {color.contrast}
                 </span>
               </span>
-              <span className="font-mono uppercase">{color.contrast}</span>
+              <CopyArtifactButton
+                label={`Copy ${color.name} color value`}
+                value={color.value}
+              >
+                <span className="font-mono uppercase">{color.value}</span>
+              </CopyArtifactButton>
             </li>
           ))}
         </ul>
@@ -79,20 +221,55 @@ function RegionDetails({ region }: { region: BrandRegion }) {
     case "typography":
       return (
         <div className="mt-4 flex flex-col gap-3 text-xs">
-          <p>
-            <strong>{region.content.display}</strong> · weights{" "}
-            {region.content.displayWeights.join(", ")} · fallbacks{" "}
-            {region.content.displayFallbacks.join(", ")}
-          </p>
-          <p>
-            <strong>{region.content.body}</strong> · weights{" "}
-            {region.content.bodyWeights.join(", ")} · fallbacks{" "}
-            {region.content.bodyFallbacks.join(", ")}
-          </p>
+          {[
+            {
+              label: "Display",
+              family: region.content.display,
+              weights: region.content.displayWeights,
+              fallbacks: region.content.displayFallbacks,
+            },
+            {
+              label: "Text",
+              family: region.content.body,
+              weights: region.content.bodyWeights,
+              fallbacks: region.content.bodyFallbacks,
+            },
+          ].map((typographyStyle) => (
+            <div
+              key={typographyStyle.label}
+              className="grid grid-cols-[1fr_auto] items-center gap-2"
+            >
+              <p>
+                <strong>{typographyStyle.family}</strong> ·{" "}
+                {typographyStyle.label.toLowerCase()} · weights{" "}
+                {typographyStyle.weights.join(", ")} · fallbacks{" "}
+                {typographyStyle.fallbacks.join(", ")}
+              </p>
+              <CopyArtifactButton
+                label={`Copy ${typographyStyle.family} type value`}
+                value={`${typographyStyle.family} · ${typographyStyle.label.toLowerCase()} · weights ${typographyStyle.weights.join(", ")} · fallbacks ${typographyStyle.fallbacks.join(", ")}`}
+              />
+            </div>
+          ))}
+          <CopyArtifactButton
+            label="Copy sample headline"
+            value={region.content.sampleHeadline}
+          >
+            Copy sample headline
+          </CopyArtifactButton>
           <ul className="flex flex-col gap-1 text-muted-foreground">
             {region.content.scale.map((step) => (
-              <li key={step.name}>
-                {step.name}: {step.size}/{step.lineHeight}, {step.weight}
+              <li
+                key={step.name}
+                className="flex items-center justify-between gap-2"
+              >
+                <span>
+                  {step.name}: {step.size}/{step.lineHeight}, {step.weight}
+                </span>
+                <CopyArtifactButton
+                  label={`Copy ${step.name} type scale value`}
+                  value={`font-size: ${step.size}; line-height: ${step.lineHeight}; font-weight: ${step.weight};`}
+                />
               </li>
             ))}
           </ul>
@@ -100,36 +277,125 @@ function RegionDetails({ region }: { region: BrandRegion }) {
       );
     case "voice-and-tone":
       return (
-        <div className="mt-4 flex flex-col gap-2 text-xs">
-          <p>
-            <strong>Prefer:</strong> {region.content.preferredWords.join(", ")}
-          </p>
-          <p>
-            <strong>Avoid:</strong> {region.content.avoidedWords.join(", ")}
-          </p>
-          <p className="text-muted-foreground line-through">
-            {region.content.beforeAfter.before}
-          </p>
-          <p>{region.content.beforeAfter.after}</p>
+        <CopyArtifactList
+          artifacts={[
+            { label: "Voice promise", value: region.content.promise },
+            {
+              label: "Prefer",
+              value: region.content.preferredWords.join(", "),
+            },
+            {
+              label: "Avoid",
+              value: region.content.avoidedWords.join(", "),
+            },
+            { label: "Before", value: region.content.beforeAfter.before },
+            { label: "After", value: region.content.beforeAfter.after },
+            ...region.content.principles.map((value, index) => ({
+              label: `Principle ${index + 1}`,
+              value,
+            })),
+          ]}
+        />
+      );
+    case "photography": {
+      const roleLabels = {
+        hero: "Hero",
+        product: "Product or service",
+        people: "People and culture",
+        texture: "Texture or abstract",
+      } as const;
+      return (
+        <div className="mt-4 flex flex-col gap-2">
+          <CopyArtifactButton
+            label="Copy photography direction"
+            value={region.content.direction}
+          >
+            Copy photography direction
+          </CopyArtifactButton>
+          {region.content.photographs.map((photograph) => {
+            const roleLabel = roleLabels[photograph.role];
+            const isDownloadable =
+              photograph.state === "ready" &&
+              Boolean(photograph.url || photograph.colors);
+            return (
+              <ArtifactActionButton
+                key={photograph.role}
+                label={`Download ${roleLabel} photograph`}
+                successMessage={`${roleLabel} photograph downloaded`}
+                errorMessage={`Could not download ${roleLabel.toLowerCase()} photograph`}
+                icon={DownloadIcon}
+                disabled={!isDownloadable}
+                onAction={() =>
+                  downloadBrandPhotograph({
+                    projectName,
+                    role: photograph.role,
+                    url: photograph.url,
+                    colors: photograph.colors,
+                  })
+                }
+              >
+                {isDownloadable
+                  ? `Download ${roleLabel}`
+                  : `${roleLabel} is not ready`}
+              </ArtifactActionButton>
+            );
+          })}
         </div>
       );
+    }
+    case "motion":
+      return (
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <CopyArtifactButton
+            label="Copy motion duration value"
+            value={region.content.duration}
+          >
+            {region.content.duration}
+          </CopyArtifactButton>
+          <CopyArtifactButton
+            label="Copy motion easing value"
+            value={region.content.easing}
+          >
+            {region.content.easing}
+          </CopyArtifactButton>
+        </div>
+      );
+    case "interface-foundation": {
+      const example = region.content.example;
+      const textArtifacts = [
+        { label: "Brand name", value: example.brandName },
+        ...example.navigation.map((value, index) => ({
+          label: `Navigation ${index + 1}`,
+          value,
+        })),
+        { label: "Interface headline", value: example.headline },
+        { label: "Interface body", value: example.body },
+        { label: "Primary action", value: example.callToAction },
+        { label: "Secondary action", value: example.secondaryAction },
+        { label: "Card title", value: example.cardTitle },
+        { label: "Card description", value: example.cardDescription },
+        { label: "Input label", value: example.inputLabel },
+        { label: "Input placeholder", value: example.inputPlaceholder },
+      ];
+      return <CopyArtifactList artifacts={textArtifacts} />;
+    }
     case "design-tokens":
       return (
         <div className="mt-4 grid grid-cols-2 gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigator.clipboard.writeText(region.content.css)}
+          <CopyArtifactButton
+            label="Copy All CSS"
+            value={region.content.css}
+            successMessage="CSS design tokens copied"
           >
-            Copy all CSS
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigator.clipboard.writeText(region.content.json)}
+            Copy All CSS
+          </CopyArtifactButton>
+          <CopyArtifactButton
+            label="Copy All JSON"
+            value={region.content.json}
+            successMessage="JSON design tokens copied"
           >
-            Copy all JSON
-          </Button>
+            Copy All JSON
+          </CopyArtifactButton>
         </div>
       );
     default:
@@ -564,7 +830,7 @@ export default function BrandSystemCanvas({
             <p className="mt-3 text-muted-foreground text-sm">
               {selectedRegion.summary}
             </p>
-            <RegionDetails region={selectedRegion} />
+            <RegionDetails region={selectedRegion} projectName={projectName} />
             <Separator className="my-5" />
             <ul className="flex list-disc flex-col gap-3 pl-4 text-sm leading-relaxed">
               {selectedRegion.rules.map((rule) => (
