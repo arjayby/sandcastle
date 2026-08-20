@@ -78,6 +78,9 @@ test("a Brand Builder can create, authenticate, reopen, and persist an owned Bra
   const progressiveVoice = page.getByRole("region", {
     name: "Voice and Tone Brand Region",
   });
+  const progressivePhotography = page.getByRole("region", {
+    name: "Photography Brand Region",
+  });
   const progressiveMotion = page.getByRole("region", {
     name: "Motion Brand Region",
   });
@@ -97,6 +100,35 @@ test("a Brand Builder can create, authenticate, reopen, and persist an owned Bra
   await expect(progressiveTypography.getByText("Ready")).toBeVisible();
   await expect(progressiveVoice.getByText("Generating")).toBeVisible();
   await expect(progressiveVoice.getByText("Ready")).toBeVisible();
+  await expect(
+    progressivePhotography.getByText("Generating", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    progressivePhotography.getByRole("img", {
+      name: "A small team planning together in a sunlit studio",
+    }),
+  ).toBeVisible();
+  await expect(
+    progressivePhotography.getByRole("img", {
+      name: "Layered paper and graphite under a botanical shadow",
+    }),
+  ).toHaveCount(0);
+  await expect(
+    progressivePhotography.getByRole("img", {
+      name: "A planning tool in use beside handwritten notes",
+    }),
+  ).toBeVisible();
+  await expect(
+    progressivePhotography.getByRole("img", {
+      name: "Two collaborators reviewing a decision together",
+    }),
+  ).toBeVisible();
+  await expect(
+    progressivePhotography.getByRole("img", {
+      name: "Layered paper and graphite under a botanical shadow",
+    }),
+  ).toBeVisible();
+  await expect(progressivePhotography.getByText("Ready")).toBeVisible();
   await expect(progressiveMotion.getByText("Generating")).toBeVisible();
   await expect(progressiveInterface.getByText("Unfinished")).toBeVisible();
   await expect(progressiveMotion.getByText("Ready")).toBeVisible();
@@ -372,6 +404,11 @@ test("a Brand Builder can create, authenticate, reopen, and persist an owned Bra
       .getByRole("region", { name: "Design Tokens Brand Region" })
       .getByText("Ready"),
   ).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "Photography Brand Region" })
+      .getByRole("img"),
+  ).toHaveCount(4);
 
   await page.getByRole("button", { name: "Sign out" }).click();
   await page.goto("/dashboard");

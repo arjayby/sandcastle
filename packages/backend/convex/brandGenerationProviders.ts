@@ -1,11 +1,17 @@
+import { google } from "@ai-sdk/google";
+import { generateImage, generateText, Output } from "ai";
+
 import type { Id } from "./_generated/dataModel";
 import type { ActionCtx } from "./_generated/server";
 import { brandAgent } from "./agent";
 import {
+  assertSafeBrandPhotograph,
   type BrandDirection,
   brandDirectionSchema,
+  brandPhotographInspectionSchema,
   type ColorGeneration,
   colorGenerationSchema,
+  createPhotographPrompt,
   type DesignTokensGeneration,
   designTokensGenerationSchema,
   type InterfaceGeneration,
@@ -14,6 +20,11 @@ import {
   logoGenerationSchema,
   type MotionGeneration,
   motionGenerationSchema,
+  type PhotographRole,
+  type PhotographShot,
+  type PhotographyDirection,
+  photographRoles,
+  photographyDirectionSchema,
   type TypographyGeneration,
   typographyGenerationSchema,
   type VoiceGeneration,
@@ -72,6 +83,18 @@ export type BrandGenerationProvider = {
     ctx: ActionCtx,
     context: AppliedGenerationContext,
   ) => Promise<DesignTokensGeneration>;
+  createPhotographyDirection: (
+    ctx: ActionCtx,
+    context: DirectedGenerationContext,
+  ) => Promise<PhotographyDirection>;
+};
+
+export type BrandImageProvider = {
+  createPhotograph: (
+    context: DirectedGenerationContext,
+    direction: PhotographyDirection,
+    shot: PhotographShot,
+  ) => Promise<{ data: Uint8Array; mediaType: string }>;
 };
 
 function typeScaleTokenName(name: string, index: number) {
@@ -316,10 +339,50 @@ const controlledProvider: BrandGenerationProvider = {
       motion: { duration: "320ms", easing: "cubic-bezier(0, 0, 1, 1)" },
     });
   },
+  async createPhotographyDirection() {
+    await controlledPause();
+    return photographyDirectionSchema.parse({
+      summary: "Observed teamwork shaped by warm directional light.",
+      aesthetic: "Documentary, tactile, composed, and quietly optimistic.",
+      lighting: "Low winter sunlight with gentle natural shadow.",
+      palette: ["Harbor ink", "Signal gold", "Warm paper"],
+      rules: [
+        "Favor candid moments over staged collaboration.",
+        "Keep materials tactile and believable.",
+        "Leave enough visual quiet for the subject to breathe.",
+      ],
+      shots: [
+        {
+          role: "hero",
+          subject: "A calm studio where a small team shapes a plan.",
+          composition: "Wide environmental composition with open copy space.",
+          alt: "A small team planning together in a sunlit studio",
+        },
+        {
+          role: "product",
+          subject: "A planning tool being used beside handwritten notes.",
+          composition: "Close three quarter view with hands in frame.",
+          alt: "A planning tool in use beside handwritten notes",
+        },
+        {
+          role: "people",
+          subject: "Two collaborators reviewing a shared decision.",
+          composition: "Natural mid shot with unposed expressions.",
+          alt: "Two collaborators reviewing a decision together",
+        },
+        {
+          role: "texture",
+          subject: "Layered paper, graphite, and botanical shadow.",
+          composition: "Abstract overhead crop with generous negative space.",
+          alt: "Layered paper and graphite under a botanical shadow",
+        },
+      ],
+    });
+  },
 };
 
-async function controlledPause() {
-  await new Promise((resolve) => setTimeout(resolve, 700));
+async function controlledPause(duration = 700) {
+  await new Promise((resolve) => setTimeout(resolve, duration));
 }
 
 const liveProvider: BrandGenerationProvider = {
@@ -408,7 +471,88 @@ const liveProvider: BrandGenerationProvider = {
     );
     return enforceTokenDependencies(context, result.object);
   },
+  async createPhotographyDirection(ctx, context) {
+    const result = await brandAgent.generateObject(
+      ctx,
+      { userId: context.ownerId },
+      {
+        schema: photographyDirectionSchema,
+        prompt: `${regionPrompt("photography", context)} Create one shared photography direction with exactly one aligned shot plan for each of these roles: hero, product or service, people and culture, and texture or abstract. The direction must guide original image generation and avoid stock photography conventions, text, watermarks, and third party branding.`,
+      },
+    );
+    return photographyDirectionSchema.parse(result.object);
+  },
 };
+
+const controlledPhotographColors: Record<
+  PhotographRole,
+  [string, string, string]
+> = {
+  hero: ["#17231F", "#B7CEB7", "#EDB33F"],
+  product: ["#D57658", "#F4EFE5", "#17231F"],
+  people: ["#402F2A", "#BC8066", "#E9D4AE"],
+  texture: ["#E7D9BD", "#A7BDA7", "#31443D"],
+};
+
+const controlledImageProvider: BrandImageProvider = {
+  async createPhotograph(_context, _direction, shot) {
+    const roleIndex = photographRoles.indexOf(shot.role);
+    await controlledPause(250 + roleIndex * 350);
+    const colors = controlledPhotographColors[shot.role];
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900"><rect width="1200" height="900" fill="${colors[0]}"/><circle cx="860" cy="240" r="310" fill="${colors[1]}"/><path d="M0 690L420 310l300 260 220-180 260 300v210H0z" fill="${colors[2]}"/></svg>`;
+    return {
+      data: new TextEncoder().encode(svg),
+      mediaType: "image/svg+xml",
+    };
+  },
+};
+
+const liveImageProvider: BrandImageProvider = {
+  async createPhotograph(context, direction, shot) {
+    let lastError: unknown = new Error("Brand Photograph generation failed");
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        const { image } = await generateImage({
+          model: google.image("imagen-4.0-generate-001"),
+          prompt: createPhotographPrompt(
+            {
+              companyName: context.companyName,
+              description: context.description,
+            },
+            direction,
+            shot,
+          ),
+          aspectRatio: shot.role === "hero" ? "16:9" : "4:3",
+        });
+        await inspectBrandPhotograph(image.uint8Array, image.mediaType);
+        return { data: image.uint8Array, mediaType: image.mediaType };
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    throw lastError;
+  },
+};
+
+async function inspectBrandPhotograph(data: Uint8Array, mediaType: string) {
+  const { output } = await generateText({
+    model: google("gemini-2.5-flash"),
+    output: Output.object({ schema: brandPhotographInspectionSchema }),
+    messages: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: "Inspect this generated Brand Photograph. Report any visible text or lettering, any watermark, and any recognizable third party logo or branding. Be strict. Do not flag ordinary unbranded objects.",
+          },
+          { type: "image", image: data, mediaType },
+        ],
+      },
+    ],
+  });
+  return assertSafeBrandPhotograph(output);
+}
 
 function regionPrompt(region: string, context: DirectedGenerationContext) {
   return `Generate the ${region} Brand Region for this Brand Brief and direction. Keep one coherent identity. ${JSON.stringify({ companyName: context.companyName, description: context.description, direction: context.direction })}`;
@@ -418,4 +562,10 @@ export function getBrandGenerationProvider() {
   return process.env.BRAND_AGENT_PROVIDER === "controlled"
     ? controlledProvider
     : liveProvider;
+}
+
+export function getBrandImageProvider() {
+  return process.env.BRAND_AGENT_PROVIDER === "controlled"
+    ? controlledImageProvider
+    : liveImageProvider;
 }

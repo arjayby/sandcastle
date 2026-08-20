@@ -7,8 +7,13 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
+import { photographRoles } from "./brandGenerationContract";
+import {
+  generationStageValidator,
+  photographRoleValidator,
+} from "./brandGenerationValidators";
 
-const brandProjectValidator = v.object({
+const brandProjectFields = {
   _id: v.id("brandProjects"),
   _creationTime: v.number(),
   ownerId: v.string(),
@@ -17,29 +22,30 @@ const brandProjectValidator = v.object({
   companyName: v.string(),
   description: v.string(),
   updatedAt: v.number(),
-  generationStage: v.optional(
-    v.union(
-      v.literal("direction"),
-      v.literal("logo"),
-      v.literal("color"),
-      v.literal("typography"),
-      v.literal("voice-and-tone"),
-      v.literal("motion"),
-      v.literal("interface-foundation"),
-      v.literal("design-tokens"),
-      v.literal("ready"),
-      v.literal("failed"),
-    ),
-  ),
+  generationStage: v.optional(generationStageValidator),
   generationError: v.optional(v.string()),
   directionJson: v.optional(v.string()),
   logoJson: v.optional(v.string()),
   colorJson: v.optional(v.string()),
   typographyJson: v.optional(v.string()),
   voiceJson: v.optional(v.string()),
+  photographyDirectionJson: v.optional(v.string()),
   motionJson: v.optional(v.string()),
   interfaceJson: v.optional(v.string()),
   designTokensJson: v.optional(v.string()),
+};
+
+const brandProjectValidator = v.object(brandProjectFields);
+
+const brandPhotographValidator = v.object({
+  role: photographRoleValidator,
+  state: v.union(
+    v.literal("generating"),
+    v.literal("ready"),
+    v.literal("failed"),
+  ),
+  alt: v.string(),
+  url: v.optional(v.string()),
 });
 
 async function getOwnerId(
@@ -155,11 +161,48 @@ export const list = query({
 
 export const get = query({
   args: { projectId: v.id("brandProjects") },
-  returns: v.union(brandProjectValidator, v.null()),
+  returns: v.union(
+    v.object({
+      ...brandProjectFields,
+      photographs: v.array(brandPhotographValidator),
+    }),
+    v.null(),
+  ),
   handler: async (ctx, { projectId }) => {
     const ownerId = await getOwnerId(ctx);
     const project = await ctx.db.get(projectId);
-    return project?.ownerId === ownerId ? project : null;
+    if (!project || project.ownerId !== ownerId) {
+      return null;
+    }
+
+    const records = await ctx.db
+      .query("brandPhotographs")
+      .withIndex("by_project_and_role", (q) => q.eq("projectId", projectId))
+      .take(photographRoles.length);
+    const byRole = new Map(records.map((record) => [record.role, record]));
+    const photographs = await Promise.all(
+      photographRoles.flatMap((role) => {
+        const record = byRole.get(role);
+        if (!record) {
+          return [];
+        }
+        return [
+          (async () => {
+            const url = record.storageId
+              ? await ctx.storage.getUrl(record.storageId)
+              : null;
+            return {
+              role: record.role,
+              state: record.state,
+              alt: record.alt,
+              ...(url ? { url } : {}),
+            };
+          })(),
+        ];
+      }),
+    );
+
+    return { ...project, photographs };
   },
 });
 
@@ -211,13 +254,41 @@ export const duplicate = mutation({
     const ownerId = await getOwnerId(ctx);
     const project = await getOwnedBrandProject(ctx, ownerId, projectId);
 
-    return await ctx.db.insert("brandProjects", {
+    const copiedProjectId = await ctx.db.insert("brandProjects", {
       ...getCopyableBrandProjectData(project),
       ownerId,
       draftId: crypto.randomUUID(),
       name: `${project.name ?? project.companyName} copy`,
       updatedAt: Date.now(),
     });
+    const photographs = await ctx.db
+      .query("brandPhotographs")
+      .withIndex("by_project_and_role", (q) => q.eq("projectId", projectId))
+      .take(photographRoles.length);
+    await Promise.all(
+      photographs.map(
+        async ({ _id, _creationTime, projectId: _, ...photograph }) => {
+          void [_id, _creationTime, _];
+          await ctx.db.insert("brandPhotographs", {
+            ...photograph,
+            projectId: copiedProjectId,
+          });
+          if (photograph.state === "generating") {
+            await ctx.scheduler.runAfter(
+              0,
+              internal.brandGeneration.generatePhotograph,
+              {
+                projectId: copiedProjectId,
+                ownerId,
+                role: photograph.role,
+              },
+            );
+          }
+        },
+      ),
+    );
+
+    return copiedProjectId;
   },
 });
 
@@ -228,6 +299,24 @@ export const remove = mutation({
     const ownerId = await getOwnerId(ctx);
     await getOwnedBrandProject(ctx, ownerId, projectId);
 
+    const photographs = await ctx.db
+      .query("brandPhotographs")
+      .withIndex("by_project_and_role", (q) => q.eq("projectId", projectId))
+      .take(photographRoles.length);
+    for (const photograph of photographs) {
+      await ctx.db.delete(photograph._id);
+      if (photograph.storageId) {
+        const remainingReference = await ctx.db
+          .query("brandPhotographs")
+          .withIndex("by_storage_id", (q) =>
+            q.eq("storageId", photograph.storageId),
+          )
+          .first();
+        if (!remainingReference) {
+          await ctx.storage.delete(photograph.storageId);
+        }
+      }
+    }
     await ctx.db.delete(projectId);
     return null;
   },
