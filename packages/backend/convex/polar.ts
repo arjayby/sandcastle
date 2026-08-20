@@ -4,7 +4,9 @@ import { api, components } from "./_generated/api";
 import type { DataModel } from "./_generated/dataModel";
 import { action, query } from "./_generated/server";
 
-type CurrentSubscription = Awaited<ReturnType<Polar<DataModel>["getCurrentSubscription"]>>;
+type CurrentSubscription = Awaited<
+  ReturnType<Polar<DataModel>["getCurrentSubscription"]>
+>;
 
 export const polar: Polar<DataModel> = new Polar<DataModel>(components.polar, {
   getUserInfo: async (ctx) => {

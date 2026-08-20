@@ -28,18 +28,33 @@ import {
   MessageScrollerProvider,
   MessageScrollerViewport,
 } from "@sandcastle/ui/components/message-scroller";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@sandcastle/ui/components/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@sandcastle/ui/components/tooltip";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation } from "convex/react";
-import { ArrowUpIcon, Loader2, MessageCircleDashedIcon, RotateCwIcon } from "lucide-react";
-import { useState, type FormEvent, type KeyboardEvent } from "react";
+import {
+  ArrowUpIcon,
+  Loader2,
+  MessageCircleDashedIcon,
+  RotateCwIcon,
+} from "lucide-react";
+import { type FormEvent, type KeyboardEvent, useState } from "react";
 import { Streamdown } from "streamdown";
 
 export const Route = createFileRoute("/ai")({
   component: RouteComponent,
 });
 
-function StreamingMessageText({ text, isStreaming }: { text: string; isStreaming: boolean }) {
+function StreamingMessageText({
+  text,
+  isStreaming,
+}: {
+  text: string;
+  isStreaming: boolean;
+}) {
   const [visibleText] = useSmoothText(text, {
     startStreaming: isStreaming,
   });
@@ -105,8 +120,10 @@ function RouteComponent() {
         <header className="shrink-0 border-b px-4 py-3">
           <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3">
             <div className="min-w-0">
-              <h1 className="text-sm font-medium">New Chat</h1>
-              <p className="text-xs/relaxed text-muted-foreground">How can I help you today?</p>
+              <h1 className="font-medium text-sm">New Chat</h1>
+              <p className="text-muted-foreground text-xs/relaxed">
+                How can I help you today?
+              </p>
             </div>
             <div className="shrink-0">
               <Tooltip>
@@ -137,7 +154,9 @@ function RouteComponent() {
                   <MessageCircleDashedIcon />
                 </EmptyMedia>
                 <EmptyTitle>Morning, sandcastle!</EmptyTitle>
-                <EmptyDescription>What are we working on today?</EmptyDescription>
+                <EmptyDescription>
+                  What are we working on today?
+                </EmptyDescription>
               </EmptyHeader>
             </Empty>
           ) : (
@@ -157,7 +176,9 @@ function RouteComponent() {
                       >
                         <Message align={isUser ? "end" : "start"}>
                           <MessageBody>
-                            <MessageHeader>{isUser ? "You" : "AI Assistant"}</MessageHeader>
+                            <MessageHeader>
+                              {isUser ? "You" : "AI Assistant"}
+                            </MessageHeader>
                             <Bubble
                               align={isUser ? "end" : "start"}
                               variant={isUser ? "default" : "secondary"}
@@ -165,7 +186,9 @@ function RouteComponent() {
                               <BubbleContent>
                                 <StreamingMessageText
                                   text={(message.parts ?? [])
-                                    .map((part) => (part.type === "text" ? part.text : ""))
+                                    .map((part) =>
+                                      part.type === "text" ? part.text : "",
+                                    )
                                     .join("")}
                                   isStreaming={message.status === "streaming"}
                                 />
@@ -221,7 +244,11 @@ function RouteComponent() {
                     disabled={isBusy || !input.trim()}
                     className="ml-auto"
                   >
-                    {isBusy ? <Loader2 className="animate-spin" /> : <ArrowUpIcon />}
+                    {isBusy ? (
+                      <Loader2 className="animate-spin" />
+                    ) : (
+                      <ArrowUpIcon />
+                    )}
                     <span className="sr-only">Send</span>
                   </InputGroupButton>
                 </InputGroupAddon>
