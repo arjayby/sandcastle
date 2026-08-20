@@ -5,6 +5,8 @@ import type { Id } from "@sandcastle/backend/convex/_generated/dataModel.js";
 import { ConvexHttpClient } from "convex/browser";
 import { loadEnv } from "vite";
 
+import { expectBottomSheet } from "./helpers/responsive";
+
 const convexUrl = loadEnv(
   "development",
   resolve(import.meta.dirname, ".."),
@@ -49,7 +51,9 @@ test("a Brand Builder can share and revoke an accountless read only Review Link"
   const reviewUrl = await reviewLinkInput.inputValue();
 
   const reviewerContext = await browser.newContext({
+    hasTouch: true,
     permissions: ["clipboard-read", "clipboard-write"],
+    viewport: { width: 390, height: 844 },
   });
   const reviewerPage = await reviewerContext.newPage();
   await reviewerPage.goto(reviewUrl);
@@ -59,7 +63,7 @@ test("a Brand Builder can share and revoke an accountless read only Review Link"
       name: `${companyName} Brand System`,
     }),
   ).toBeVisible();
-  await expect(reviewerPage.getByText(description)).toBeVisible();
+  await expect(reviewerPage.getByText(description)).toContainText(description);
   await expect(
     reviewerPage.getByRole("application", { name: "Brand Canvas viewport" }),
   ).toBeVisible();
@@ -77,6 +81,11 @@ test("a Brand Builder can share and revoke an accountless read only Review Link"
       name: /rename|duplicate|delete|retry/i,
     }),
   ).toHaveCount(0);
+  await expect(
+    reviewerPage.getByRole("button", {
+      name: "Revise complete Brand System",
+    }),
+  ).toHaveCount(0);
 
   const zoomBefore = await reviewerPage.getByLabel("Canvas zoom").textContent();
   await reviewerPage.getByRole("button", { name: "Zoom in" }).click();
@@ -90,6 +99,12 @@ test("a Brand Builder can share and revoke an accountless read only Review Link"
   const inspector = reviewerPage.getByRole("complementary", {
     name: "Brand Region inspector",
   });
+  await expectBottomSheet(
+    inspector,
+    reviewerPage.getByRole("application", {
+      name: "Brand Canvas viewport",
+    }),
+  );
   await inspector.getByRole("button", { name: "Focus Logo" }).click();
   await inspector.getByRole("button", { name: "Copy logo tagline" }).click();
   await expect

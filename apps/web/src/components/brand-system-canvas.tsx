@@ -12,6 +12,7 @@ import { Textarea } from "@sandcastle/ui/components/textarea";
 import { cn } from "@sandcastle/ui/lib/utils";
 import { Link } from "@tanstack/react-router";
 import {
+  ArrowLeftIcon,
   CopyIcon,
   DownloadIcon,
   FocusIcon,
@@ -70,6 +71,21 @@ type DragState = {
   originY: number;
 };
 
+type PointerPosition = {
+  x: number;
+  y: number;
+};
+
+type PinchState = {
+  pointerIds: [number, number];
+  startCenter: PointerPosition;
+  startDistance: number;
+  startTransform: ViewTransform;
+};
+
+const INSPECTOR_CLASS_NAME =
+  "absolute right-3 bottom-3 left-3 max-h-[55%] overflow-auto border bg-background p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-xl lg:top-3 lg:bottom-3 lg:left-auto lg:max-h-none lg:w-80 lg:pb-5";
+
 const brandRegionNames: Record<BrandRegion["id"], string> = {
   logo: "Logo",
   color: "Color",
@@ -83,6 +99,31 @@ const brandRegionNames: Record<BrandRegion["id"], string> = {
 
 function clampScale(scale: number) {
   return Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale));
+}
+
+function getGestureCenter(
+  first: PointerPosition,
+  second: PointerPosition,
+): PointerPosition {
+  return {
+    x: (first.x + second.x) / 2,
+    y: (first.y + second.y) / 2,
+  };
+}
+
+function getGestureDistance(first: PointerPosition, second: PointerPosition) {
+  return Math.hypot(second.x - first.x, second.y - first.y);
+}
+
+function capturePointer(element: HTMLElement, pointerId: number) {
+  if (element.hasPointerCapture(pointerId)) {
+    return;
+  }
+  try {
+    element.setPointerCapture(pointerId);
+  } catch {
+    // A pointer may end before a delayed move event is handled.
+  }
 }
 
 function ArtifactActionButton({
@@ -545,6 +586,8 @@ export default function BrandSystemCanvas({
   const viewportRef = useRef<HTMLDivElement>(null);
   const inspectorRef = useRef<HTMLElement>(null);
   const dragRef = useRef<DragState | null>(null);
+  const activeTouchesRef = useRef(new Map<number, PointerPosition>());
+  const pinchRef = useRef<PinchState | null>(null);
   const didPanRef = useRef(false);
   const [isPanning, setIsPanning] = useState(false);
   const [selectedRegionId, setSelectedRegionId] = useState<
@@ -559,6 +602,23 @@ export default function BrandSystemCanvas({
     y: 0,
     scale: 0.5,
   });
+  const transformRef = useRef(transform);
+
+  const applyTransform = useCallback((next: ViewTransform) => {
+    transformRef.current = next;
+    setTransform(next);
+  }, []);
+
+  const updateTransform = useCallback(
+    (updater: (current: ViewTransform) => ViewTransform) => {
+      setTransform((current) => {
+        const next = updater(current);
+        transformRef.current = next;
+        return next;
+      });
+    },
+    [],
+  );
 
   const selectedRegion = brandSystem.regions.find(
     (region) => region.id === selectedRegionId,
@@ -619,12 +679,12 @@ export default function BrandSystemCanvas({
       ),
     );
 
-    setTransform({
+    applyTransform({
       x: (width - brandSystem.board.width * scale) / 2,
       y: (height - brandSystem.board.height * scale) / 2,
       scale,
     });
-  }, [brandSystem.board.height, brandSystem.board.width]);
+  }, [applyTransform, brandSystem.board.height, brandSystem.board.width]);
 
   useLayoutEffect(() => {
     fitBrandSystem();
@@ -649,7 +709,7 @@ export default function BrandSystemCanvas({
       const anchorX = clientX - bounds.left;
       const anchorY = clientY - bounds.top;
 
-      setTransform((current) => {
+      updateTransform((current) => {
         const scale = clampScale(current.scale * factor);
         const worldX = (anchorX - current.x) / current.scale;
         const worldY = (anchorY - current.y) / current.scale;
@@ -661,7 +721,7 @@ export default function BrandSystemCanvas({
         };
       });
     },
-    [],
+    [updateTransform],
   );
 
   function zoomFromCenter(factor: number) {
@@ -685,7 +745,7 @@ export default function BrandSystemCanvas({
       return;
     }
 
-    setTransform((current) => ({
+    updateTransform((current) => ({
       ...current,
       x: current.x - event.deltaX,
       y: current.y - event.deltaY,
@@ -694,6 +754,41 @@ export default function BrandSystemCanvas({
 
   function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
     if (event.button !== 0) {
+      return;
+    }
+
+    if (event.pointerType === "touch") {
+      if (activeTouchesRef.current.size === 0) {
+        didPanRef.current = false;
+      }
+      activeTouchesRef.current.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY,
+      });
+      capturePointer(event.currentTarget, event.pointerId);
+
+      const touches = [...activeTouchesRef.current.entries()];
+      if (touches.length === 1) {
+        const [[pointerId, position]] = touches;
+        dragRef.current = {
+          pointerId,
+          startX: position.x,
+          startY: position.y,
+          originX: transformRef.current.x,
+          originY: transformRef.current.y,
+        };
+        pinchRef.current = null;
+      } else if (touches.length === 2) {
+        const [[firstId, first], [secondId, second]] = touches;
+        dragRef.current = null;
+        pinchRef.current = {
+          pointerIds: [firstId, secondId],
+          startCenter: getGestureCenter(first, second),
+          startDistance: getGestureDistance(first, second),
+          startTransform: transformRef.current,
+        };
+      }
+      setIsPanning(true);
       return;
     }
 
@@ -709,6 +804,48 @@ export default function BrandSystemCanvas({
   }
 
   function handlePointerMove(event: ReactPointerEvent<HTMLDivElement>) {
+    if (
+      event.pointerType === "touch" &&
+      activeTouchesRef.current.has(event.pointerId)
+    ) {
+      activeTouchesRef.current.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY,
+      });
+      const pinch = pinchRef.current;
+      if (pinch) {
+        const first = activeTouchesRef.current.get(pinch.pointerIds[0]);
+        const second = activeTouchesRef.current.get(pinch.pointerIds[1]);
+        const viewport = viewportRef.current;
+        if (!(first && second && viewport)) {
+          return;
+        }
+
+        const center = getGestureCenter(first, second);
+        const distance = getGestureDistance(first, second);
+        const bounds = viewport.getBoundingClientRect();
+        const startAnchorX = pinch.startCenter.x - bounds.left;
+        const startAnchorY = pinch.startCenter.y - bounds.top;
+        const anchorX = center.x - bounds.left;
+        const anchorY = center.y - bounds.top;
+        const scale = clampScale(
+          pinch.startTransform.scale * (distance / pinch.startDistance),
+        );
+        const worldX =
+          (startAnchorX - pinch.startTransform.x) / pinch.startTransform.scale;
+        const worldY =
+          (startAnchorY - pinch.startTransform.y) / pinch.startTransform.scale;
+
+        didPanRef.current = true;
+        applyTransform({
+          x: anchorX - worldX * scale,
+          y: anchorY - worldY * scale,
+          scale,
+        });
+        return;
+      }
+    }
+
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) {
       return;
@@ -717,12 +854,10 @@ export default function BrandSystemCanvas({
     const deltaX = event.clientX - drag.startX;
     const deltaY = event.clientY - drag.startY;
     if (Math.abs(deltaX) + Math.abs(deltaY) > 4) {
-      if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
-        event.currentTarget.setPointerCapture(event.pointerId);
-      }
+      capturePointer(event.currentTarget, event.pointerId);
       didPanRef.current = true;
     }
-    setTransform((current) => ({
+    updateTransform((current) => ({
       ...current,
       x: drag.originX + deltaX,
       y: drag.originY + deltaY,
@@ -730,6 +865,26 @@ export default function BrandSystemCanvas({
   }
 
   function finishPointerGesture(event: ReactPointerEvent<HTMLDivElement>) {
+    if (event.pointerType === "touch") {
+      activeTouchesRef.current.delete(event.pointerId);
+      const remainingTouch = [...activeTouchesRef.current.entries()][0];
+      pinchRef.current = null;
+      if (remainingTouch) {
+        const [pointerId, position] = remainingTouch;
+        dragRef.current = {
+          pointerId,
+          startX: position.x,
+          startY: position.y,
+          originX: transformRef.current.x,
+          originY: transformRef.current.y,
+        };
+        return;
+      }
+      dragRef.current = null;
+      setIsPanning(false);
+      return;
+    }
+
     if (dragRef.current?.pointerId !== event.pointerId) {
       return;
     }
@@ -795,7 +950,7 @@ export default function BrandSystemCanvas({
         1.25,
       ),
     );
-    setTransform({
+    applyTransform({
       x: width / 2 - (region.frame.x + region.frame.width / 2) * scale,
       y: height / 2 - (region.frame.y + region.frame.height / 2) * scale,
       scale,
@@ -804,24 +959,30 @@ export default function BrandSystemCanvas({
 
   return (
     <main
-      className="grid h-full min-h-0 grid-rows-[auto_1fr]"
+      className="brand-canvas-shell grid h-full min-h-0 min-w-0 grid-rows-[auto_1fr]"
       aria-label="Brand Canvas"
       style={brandThemeStyle}
     >
       <link rel="stylesheet" href={typographyRegion.content.stylesheetUrl} />
-      <header className="flex min-h-16 items-center gap-3 border-b bg-background px-3 py-2 md:px-4">
+      <header className="flex min-h-16 min-w-0 flex-wrap items-center gap-1 border-b bg-background px-3 py-2 lg:flex-nowrap lg:gap-3 lg:px-4">
         {onSignOut ? (
           <>
             <Link
               to="/dashboard"
-              className={buttonVariants({ variant: "outline", size: "sm" })}
+              aria-label="All Brand Projects"
+              className={buttonVariants({
+                variant: "outline",
+                size: "sm",
+                className: "brand-canvas-navigation",
+              })}
             >
-              All Brand Projects
+              <ArrowLeftIcon />
+              <span className="hidden lg:inline">All Brand Projects</span>
             </Link>
             <Separator orientation="vertical" className="hidden h-7 md:block" />
           </>
         ) : null}
-        <div className="min-w-0 flex-1">
+        <div className="order-first min-w-0 basis-full lg:order-none lg:flex-1 lg:basis-auto">
           <h1 className="truncate font-medium text-sm">
             {projectName} Brand System
           </h1>
@@ -847,7 +1008,7 @@ export default function BrandSystemCanvas({
             }}
           >
             <SparklesIcon data-icon="inline-start" />
-            <span className="hidden sm:inline">Revise system</span>
+            <span className="hidden lg:inline">Revise system</span>
           </Button>
         ) : null}
         {onUndo && onRedo ? (
@@ -888,7 +1049,7 @@ export default function BrandSystemCanvas({
           </Button>
           <output
             aria-label="Canvas zoom"
-            className="w-11 text-center font-mono text-muted-foreground text-xs tabular-nums"
+            className="hidden w-11 text-center font-mono text-muted-foreground text-xs tabular-nums lg:block"
           >
             {Math.round(transform.scale * 100)}%
           </output>
@@ -907,7 +1068,7 @@ export default function BrandSystemCanvas({
             onClick={fitBrandSystem}
           >
             <ScanIcon data-icon="inline-start" />
-            <span className="hidden sm:inline">Fit</span>
+            <span className="hidden lg:inline">Fit</span>
           </Button>
         </div>
         {onSignOut ? (
@@ -968,7 +1129,7 @@ export default function BrandSystemCanvas({
             )
           ) {
             event.preventDefault();
-            setTransform((current) => ({
+            updateTransform((current) => ({
               ...current,
               x:
                 current.x +
@@ -1018,7 +1179,7 @@ export default function BrandSystemCanvas({
           <aside
             ref={inspectorRef}
             aria-label="Brand Region inspector"
-            className="absolute right-3 bottom-3 left-3 max-h-[42%] overflow-auto border bg-background p-5 shadow-xl md:top-3 md:bottom-3 md:left-auto md:max-h-none md:w-80"
+            className={INSPECTOR_CLASS_NAME}
             onPointerDown={(event) => event.stopPropagation()}
             onWheel={(event) => event.stopPropagation()}
           >
@@ -1071,7 +1232,7 @@ export default function BrandSystemCanvas({
           <aside
             ref={inspectorRef}
             aria-label="Brand System revision inspector"
-            className="absolute right-3 bottom-3 left-3 max-h-[42%] overflow-auto border bg-background p-5 shadow-xl md:top-3 md:bottom-3 md:left-auto md:max-h-none md:w-80"
+            className={INSPECTOR_CLASS_NAME}
             onPointerDown={(event) => event.stopPropagation()}
             onWheel={(event) => event.stopPropagation()}
           >

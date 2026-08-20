@@ -458,7 +458,7 @@ export default function BrandRegionCard({
         size="icon-sm"
         aria-label={`Inspect ${region.name} Brand Region`}
         aria-pressed={isSelected}
-        className="absolute top-2 right-2 z-10 opacity-0 focus:opacity-100 group-hover/region:opacity-100"
+        className="brand-region-inspect absolute top-2 right-2 z-10 opacity-0 focus:opacity-100 group-hover/region:opacity-100"
         onClick={onSelect}
       >
         <FocusIcon />
