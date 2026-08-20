@@ -1,2 +1,75 @@
 @import "@sandcastle/ui/globals.css";
 @source "../node_modules/streamdown/dist/*.js";
+
+.brand-paper {
+	background-color: var(--brand-paper, #f2ede4);
+	background-image:
+		radial-gradient(
+			circle at 7% 14%,
+			rgb(159 139 108 / 10%) 0 0.8px,
+			transparent 1.3px
+		),
+		radial-gradient(
+			circle at 19% 68%,
+			rgb(125 129 124 / 9%) 0 0.7px,
+			transparent 1.2px
+		),
+		radial-gradient(
+			circle at 33% 29%,
+			rgb(176 151 113 / 8%) 0 1px,
+			transparent 1.5px
+		),
+		radial-gradient(
+			circle at 48% 83%,
+			rgb(128 131 127 / 8%) 0 0.8px,
+			transparent 1.3px
+		),
+		radial-gradient(
+			circle at 64% 11%,
+			rgb(166 144 111 / 9%) 0 0.9px,
+			transparent 1.4px
+		),
+		radial-gradient(
+			circle at 78% 56%,
+			rgb(122 126 122 / 8%) 0 0.7px,
+			transparent 1.2px
+		),
+		radial-gradient(
+			circle at 92% 87%,
+			rgb(173 149 112 / 9%) 0 0.9px,
+			transparent 1.4px
+		);
+}
+
+.brand-display {
+	font-family: var(--brand-font-display, Georgia, serif);
+}
+
+@keyframes brand-motion-orbit {
+	0% {
+		transform: translate3d(-42px, 24px, 0) rotate(-8deg);
+	}
+	55% {
+		transform: translate3d(46px, -20px, 0) rotate(12deg);
+	}
+	100% {
+		transform: translate3d(-42px, 24px, 0) rotate(-8deg);
+	}
+}
+
+.brand-motion-orbit {
+	animation-name: brand-motion-orbit;
+	animation-duration: var(--brand-motion-duration, 320ms);
+	animation-timing-function: var(
+		--brand-motion-easing,
+		cubic-bezier(0.22, 1, 0.36, 1)
+	);
+	animation-iteration-count: infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.brand-motion-orbit {
+		animation: none;
+		transform: translate3d(0, 0, 0);
+	}
+}
