@@ -74,6 +74,16 @@ If you want to add app-specific blocks instead of shared primitives, run the sha
 - Initialize hooks: `pnpm run prepare`
 - Run checks: `pnpm run check`
 
+## Browser Tests
+
+The browser test verifies real authentication and Convex persistence. Complete the Convex setup above before running it, and configure the deployment with `SITE_URL=http://localhost:3001` so Better Auth trusts the Playwright origin.
+
+Run the complete suite from the repository root:
+
+```bash
+pnpm test
+```
+
 ## Project Structure
 
 ```
