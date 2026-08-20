@@ -8,7 +8,7 @@
     "build": "vite build",
     "serve": "vite preview",
     "start": "vite",
-    "test": "playwright test",
+    "test": "pnpm test:unit && playwright test",
     "test:unit": "vitest run --config vitest.config.ts",
     "check-types": "vite build && tsc --noEmit"
   },
@@ -48,7 +48,7 @@
     "postcss": "^8.5.24",
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
-    "vitest": "^3.2.4",
+    "vitest": "^4.1.11",
     "vite": "^8.1.5"
   }
 }

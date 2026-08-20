@@ -35,29 +35,35 @@ function LogoRegion({
 }: {
   region: Extract<BrandRegion, { id: "logo" }>;
 }) {
+  const variants = [
+    ["Primary lockup", region.content.primaryLockupSvg],
+    ["Wordmark", region.content.wordmarkSvg],
+    ["Symbol", region.content.symbolSvg],
+  ] as const;
+
   return (
     <div className="flex h-full flex-col bg-[var(--brand-paper)] p-8">
       <RegionLabel region={region} />
-      <div className="flex flex-1 items-center justify-center gap-6">
-        <img
-          src={`data:image/svg+xml,${encodeURIComponent(region.content.primaryLockupSvg)}`}
-          alt={`${region.content.wordmark} primary lockup`}
-          className="h-24 w-72 object-contain"
-        />
-        <div className="flex flex-col gap-2">
-          <p className="brand-display text-6xl text-[var(--brand-ink)] tracking-[-0.06em]">
-            {region.content.wordmark}
-          </p>
-          <p className="text-[var(--brand-muted)] text-sm tracking-[0.08em]">
-            {region.content.tagline}
-          </p>
-        </div>
-      </div>
-      <div className="flex items-center justify-between border-[var(--brand-ink)]/15 border-t pt-4 text-[var(--brand-muted)] text-xs">
-        {region.content.variants.map((variant) => (
-          <span key={variant}>{variant}</span>
+      <div className="my-5 grid flex-1 grid-cols-3 gap-4">
+        {variants.map(([label, svg]) => (
+          <figure
+            className="flex min-w-0 flex-col justify-center gap-3"
+            key={label}
+          >
+            <img
+              src={`data:image/svg+xml,${encodeURIComponent(svg)}`}
+              alt={`${region.content.wordmark} ${label.toLowerCase()}`}
+              className="h-24 w-full object-contain"
+            />
+            <figcaption className="text-center text-[var(--brand-muted)] text-xs">
+              {label}
+            </figcaption>
+          </figure>
         ))}
       </div>
+      <p className="border-[var(--brand-ink)]/15 border-t pt-4 text-center text-[var(--brand-muted)] text-xs tracking-[0.08em]">
+        {region.content.tagline}
+      </p>
     </div>
   );
 }

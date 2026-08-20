@@ -99,7 +99,6 @@ export const create = mutation({
     draftId: v.string(),
     companyName: v.string(),
     description: v.string(),
-    provider: v.optional(v.union(v.literal("live"), v.literal("controlled"))),
   },
   returns: v.id("brandProjects"),
   handler: async (ctx, args) => {
@@ -129,7 +128,6 @@ export const create = mutation({
     await ctx.scheduler.runAfter(0, internal.brandGeneration.generate, {
       projectId,
       ownerId,
-      provider: args.provider ?? "live",
     });
 
     return projectId;

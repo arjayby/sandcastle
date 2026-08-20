@@ -3,6 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 const port = process.env.PLAYWRIGHT_PORT ?? "3001";
 
 export default defineConfig({
+  globalSetup: "./tests/global-setup.ts",
   testDir: "./tests",
   timeout: 60_000,
   fullyParallel: false,
@@ -23,9 +24,6 @@ export default defineConfig({
   ],
   webServer: {
     command: `pnpm dev --host 127.0.0.1 --port ${port}`,
-    env: {
-      VITE_BRAND_AGENT_PROVIDER: "controlled",
-    },
     url: `http://localhost:${port}`,
     reuseExistingServer: !process.env.CI,
   },

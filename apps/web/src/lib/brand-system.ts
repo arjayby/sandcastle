@@ -8,13 +8,6 @@ import {
 import { z } from "zod";
 
 const hexColorSchema = z.string().regex(/^#[0-9A-F]{6}$/);
-const googleFontStylesheetSchema = z
-  .url()
-  .refine(
-    (url) => new URL(url).hostname === "fonts.googleapis.com",
-    "Typography stylesheets must use Google Fonts",
-  );
-
 const frameSchema = z.object({
   x: z.number().nonnegative(),
   y: z.number().nonnegative(),
@@ -29,18 +22,31 @@ const sharedRegionShape = {
   rules: z.array(z.string().min(1)).min(1),
 };
 
+const logoContentSchema = logoGenerationSchema.pick({
+  wordmark: true,
+  monogram: true,
+  tagline: true,
+  primaryLockupSvg: true,
+  wordmarkSvg: true,
+  symbolSvg: true,
+});
+
+const typographyContentSchema = typographyGenerationSchema.omit({
+  summary: true,
+  rules: true,
+});
+
+const voiceContentSchema = voiceGenerationSchema.omit({
+  summary: true,
+  rules: true,
+});
+
 const logoRegionSchema = z.object({
   ...sharedRegionShape,
   id: z.literal("logo"),
   name: z.literal("Logo"),
-  content: z.object({
-    wordmark: z.string().min(1),
-    monogram: z.string().min(1),
-    tagline: z.string().min(1),
+  content: logoContentSchema.extend({
     variants: z.array(z.string().min(1)).min(3),
-    primaryLockupSvg: z.string().min(1),
-    wordmarkSvg: z.string().min(1),
-    symbolSvg: z.string().min(1),
   }),
 });
 
@@ -48,64 +54,21 @@ const colorRegionSchema = z.object({
   ...sharedRegionShape,
   id: z.literal("color"),
   name: z.literal("Color"),
-  content: z.object({
-    palette: z
-      .array(
-        z.object({
-          name: z.string().min(1),
-          value: hexColorSchema,
-          role: z.string().min(1),
-          usage: z.string().min(1),
-          contrast: z.enum(["pass", "warning"]),
-        }),
-      )
-      .min(4),
-  }),
+  content: z.object({ palette: colorGenerationSchema.shape.palette }),
 });
 
 const typographyRegionSchema = z.object({
   ...sharedRegionShape,
   id: z.literal("typography"),
   name: z.literal("Typography"),
-  content: z.object({
-    display: z.string().min(1),
-    body: z.string().min(1),
-    displayFallbacks: z.array(z.string().min(1)).min(2),
-    bodyFallbacks: z.array(z.string().min(1)).min(2),
-    displayWeights: z.array(z.number().int()).min(1),
-    bodyWeights: z.array(z.number().int()).min(1),
-    scale: z
-      .array(
-        z.object({
-          name: z.string().min(1),
-          size: z.string().min(1),
-          lineHeight: z.string().min(1),
-          weight: z.number().int(),
-        }),
-      )
-      .min(3),
-    sampleHeadline: z.string().min(1),
-    stylesheetUrl: googleFontStylesheetSchema,
-  }),
+  content: typographyContentSchema,
 });
 
 const voiceRegionSchema = z.object({
   ...sharedRegionShape,
   id: z.literal("voice-and-tone"),
   name: z.literal("Voice and Tone"),
-  content: z.object({
-    promise: z.string().min(1),
-    principles: z.array(z.string().min(1)).length(3),
-    preferredWords: z.array(z.string().min(1)).min(3),
-    avoidedWords: z.array(z.string().min(1)).min(3),
-    headline: z.string().min(1),
-    body: z.string().min(1),
-    callToAction: z.string().min(1),
-    beforeAfter: z.object({
-      before: z.string().min(1),
-      after: z.string().min(1),
-    }),
-  }),
+  content: voiceContentSchema,
 });
 
 const photographyRegionSchema = z.object({

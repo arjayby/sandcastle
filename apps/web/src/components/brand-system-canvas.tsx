@@ -168,9 +168,11 @@ export default function BrandSystemCanvas({
     "--brand-paper": brandSystem.theme.paper,
     "--brand-surface": brandSystem.theme.surface,
     "--brand-muted": brandSystem.theme.muted,
-    "--brand-font-display": `"${typographyRegion.content.display}", Georgia, serif`,
+    "--brand-font-display": `"${typographyRegion.content.display}", ${typographyRegion.content.displayFallbacks.join(", ")}`,
+    "--brand-font-body": `"${typographyRegion.content.body}", ${typographyRegion.content.bodyFallbacks.join(", ")}`,
     "--brand-motion-duration": motionRegion.content.duration,
     "--brand-motion-easing": motionRegion.content.easing,
+    fontFamily: "var(--brand-font-body)",
   } as CSSProperties;
 
   const fitBrandSystem = useCallback(() => {

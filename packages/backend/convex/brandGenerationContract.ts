@@ -135,3 +135,53 @@ export const progressiveRegionIds = [
 ] as const;
 
 export type ProgressiveRegionId = (typeof progressiveRegionIds)[number];
+
+function normalizedFamilyName(value: string) {
+  return value.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function stylesheetFamilyNames(stylesheetUrl: string) {
+  return new URL(stylesheetUrl).searchParams
+    .getAll("family")
+    .map((family) => family.split(":", 1)[0] ?? "")
+    .map(normalizedFamilyName);
+}
+
+export async function validateTypographyWithGoogleFonts(value: unknown) {
+  const typography = typographyGenerationSchema.parse(value);
+  const selectedFamilies = stylesheetFamilyNames(typography.stylesheetUrl);
+  const requiredFamilies = [typography.display, typography.body].map(
+    normalizedFamilyName,
+  );
+
+  if (!requiredFamilies.every((family) => selectedFamilies.includes(family))) {
+    throw new Error(
+      "The Google Fonts stylesheet must load both selected families",
+    );
+  }
+
+  const response = await fetch(typography.stylesheetUrl, {
+    headers: { "User-Agent": "Sandcastle Brand Agent" },
+  });
+  if (!response.ok) {
+    throw new Error("The selected Google Fonts stylesheet is unavailable");
+  }
+
+  const stylesheet = (await response.text()).toLowerCase();
+  for (const family of requiredFamilies) {
+    if (!stylesheet.includes(`font-family: '${family}'`)) {
+      throw new Error(`Google Fonts did not return the ${family} family`);
+    }
+  }
+
+  for (const weight of [
+    ...typography.displayWeights,
+    ...typography.bodyWeights,
+  ]) {
+    if (!stylesheet.includes(`font-weight: ${weight}`)) {
+      throw new Error(`Google Fonts did not return weight ${weight}`);
+    }
+  }
+
+  return typography;
+}

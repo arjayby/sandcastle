@@ -17,9 +17,6 @@ const REGION_NAMES = [
 test("a Brand Builder can create, authenticate, reopen, and persist an owned Brand Project", async ({
   page,
 }) => {
-  await page.addInitScript(() => {
-    window.localStorage.setItem("sandcastle.brandAgentProvider", "controlled");
-  });
   const runId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const ownerEmail = `owner-${runId}@example.com`;
   const otherOwnerEmail = `other-${runId}@example.com`;
@@ -306,9 +303,6 @@ test("a Brand Builder can create, authenticate, reopen, and persist an owned Bra
 });
 
 test("a Brand Builder can manage multiple Brand Projects", async ({ page }) => {
-  await page.addInitScript(() => {
-    window.localStorage.setItem("sandcastle.brandAgentProvider", "controlled");
-  });
   const runId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const email = `portfolio-${runId}@example.com`;
   const password = "sandcastle-test-password";

@@ -45,12 +45,6 @@ function CreateBrandProject() {
       draftId: draft.id,
       companyName: draft.companyName,
       description: draft.description,
-      provider:
-        import.meta.env.VITE_BRAND_AGENT_PROVIDER === "controlled" ||
-        window.localStorage.getItem("sandcastle.brandAgentProvider") ===
-          "controlled"
-          ? "controlled"
-          : "live",
     })
       .then((projectId) => {
         if (!isCurrent) {
