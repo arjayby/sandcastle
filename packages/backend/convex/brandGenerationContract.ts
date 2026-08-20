@@ -31,7 +31,7 @@ const cssEasingSchema = z
       (coordinates[2] ?? 2) <= 1
     );
   }, "Motion easing x coordinates must be between 0 and 1");
-const cssTokenValueSchema = z
+const safeCssTokenValueSchema = z
   .string()
   .trim()
   .min(1)
@@ -39,8 +39,28 @@ const cssTokenValueSchema = z
     (value) => !/[;{}]/.test(value),
     "Token values cannot contain CSS declaration delimiters",
   );
-const tokenRecordSchema = z
-  .record(tokenNameSchema, cssTokenValueSchema)
+const cssDimensionSchema = safeCssTokenValueSchema.regex(
+  /^(?:0|\d+(?:\.\d+)?(?:px|rem|em))$/,
+  "Token must be a zero or CSS length value",
+);
+const cssFontStackSchema = safeCssTokenValueSchema.regex(
+  /^(?:"[^"]+"|'[^']+'|[A-Za-z][A-Za-z0-9 -]*)(?:\s*,\s*(?:"[^"]+"|'[^']+'|[A-Za-z][A-Za-z0-9 -]*))*$/,
+  "Font token must be a valid CSS font family stack",
+);
+const cssLengthPattern = "(?:0|-?(?:\\d+(?:\\.\\d+)?|\\.\\d+)(?:px|rem|em))";
+const cssRgbChannelPattern = "\\d+(?:\\.\\d+)?%?";
+const cssColorPattern = `(?:#[0-9A-Fa-f]{3,8}|rgba?\\(\\s*${cssRgbChannelPattern}(?:\\s*,\\s*${cssRgbChannelPattern}){2}(?:\\s*,\\s*(?:0|1|0?\\.\\d+))?\\s*\\))`;
+const cssShadowSchema = safeCssTokenValueSchema.regex(
+  new RegExp(
+    `^(?:none|${cssLengthPattern}\\s+${cssLengthPattern}(?:\\s+${cssLengthPattern}){0,2}\\s+${cssColorPattern})$`,
+  ),
+  "Shadow token must be none or a valid CSS box shadow",
+);
+const dimensionTokenRecordSchema = z
+  .record(tokenNameSchema, cssDimensionSchema)
+  .refine((tokens) => Object.keys(tokens).length > 0, "Tokens are required");
+const shadowTokenRecordSchema = z
+  .record(tokenNameSchema, cssShadowSchema)
   .refine((tokens) => Object.keys(tokens).length > 0, "Tokens are required");
 
 const googleFontStylesheetSchema = z
@@ -230,13 +250,13 @@ export const designTokensGenerationSchema = z.object({
       "At least five color tokens are required",
     ),
   fonts: z.object({
-    display: cssTokenValueSchema,
-    body: cssTokenValueSchema,
+    display: cssFontStackSchema,
+    body: cssFontStackSchema,
   }),
-  typeScale: tokenRecordSchema,
-  spacing: tokenRecordSchema,
-  radius: tokenRecordSchema,
-  shadows: tokenRecordSchema,
+  typeScale: dimensionTokenRecordSchema,
+  spacing: dimensionTokenRecordSchema,
+  radius: dimensionTokenRecordSchema,
+  shadows: shadowTokenRecordSchema,
   motion: z.object({
     duration: cssDurationSchema,
     easing: cssEasingSchema,

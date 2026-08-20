@@ -228,28 +228,36 @@ describe("applied Brand Region generation contract", () => {
   });
 
   test("rejects token values that could break generated CSS", () => {
-    expect(() =>
-      designTokensGenerationSchema.parse({
-        summary: "Unsafe tokens.",
-        rules: ["Keep values valid."],
-        colors: {
-          ink: "#17231F",
-          primary: "#EDB33F",
-          support: "#B7CEB7",
-          accent: "#D57658",
-          surface: "#F4EFE5",
-        },
-        fonts: { display: "Newsreader; }", body: "Inter" },
-        typeScale: { body: "18px" },
-        spacing: { medium: "16px" },
-        radius: { card: "12px" },
-        shadows: { card: "none" },
-        motion: {
-          duration: "320ms",
-          easing: "cubic-bezier(0.22, 1, 0.36, 1)",
-        },
-      }),
-    ).toThrow();
+    const tokens = {
+      summary: "Unsafe tokens.",
+      rules: ["Keep values valid."],
+      colors: {
+        ink: "#17231F",
+        primary: "#EDB33F",
+        support: "#B7CEB7",
+        accent: "#D57658",
+        surface: "#F4EFE5",
+      },
+      fonts: { display: "Newsreader, Georgia, serif", body: "Inter, Arial" },
+      typeScale: { body: "18px" },
+      spacing: { medium: "16px" },
+      radius: { card: "12px" },
+      shadows: { card: "none" },
+      motion: {
+        duration: "320ms",
+        easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+      },
+    };
+
+    for (const invalidTokens of [
+      { ...tokens, fonts: { ...tokens.fonts, display: '"Newsreader' } },
+      { ...tokens, spacing: { medium: "banana" } },
+      { ...tokens, radius: { card: "12px; }" } },
+      { ...tokens, typeScale: { body: "large" } },
+      { ...tokens, shadows: { card: "0 2px )" } },
+    ]) {
+      expect(() => designTokensGenerationSchema.parse(invalidTokens)).toThrow();
+    }
   });
 
   test("requires the semantic color roles used by applied regions", () => {
