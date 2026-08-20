@@ -1,13 +1,14 @@
+import {
+  brandDirectionSchema,
+  colorGenerationSchema,
+  logoGenerationContentSchema,
+  logoGenerationSchema,
+  typographyGenerationSchema,
+  voiceGenerationSchema,
+} from "@sandcastle/backend/convex/brandGenerationContract";
 import { z } from "zod";
 
 const hexColorSchema = z.string().regex(/^#[0-9A-F]{6}$/);
-const googleFontStylesheetSchema = z
-  .url()
-  .refine(
-    (url) => new URL(url).hostname === "fonts.googleapis.com",
-    "Typography stylesheets must use Google Fonts",
-  );
-
 const frameSchema = z.object({
   x: z.number().nonnegative(),
   y: z.number().nonnegative(),
@@ -22,14 +23,21 @@ const sharedRegionShape = {
   rules: z.array(z.string().min(1)).min(1),
 };
 
+const typographyContentSchema = typographyGenerationSchema.omit({
+  summary: true,
+  rules: true,
+});
+
+const voiceContentSchema = voiceGenerationSchema.omit({
+  summary: true,
+  rules: true,
+});
+
 const logoRegionSchema = z.object({
   ...sharedRegionShape,
   id: z.literal("logo"),
   name: z.literal("Logo"),
-  content: z.object({
-    wordmark: z.string().min(1),
-    monogram: z.string().min(1),
-    tagline: z.string().min(1),
+  content: logoGenerationContentSchema.extend({
     variants: z.array(z.string().min(1)).min(3),
   }),
 });
@@ -38,46 +46,21 @@ const colorRegionSchema = z.object({
   ...sharedRegionShape,
   id: z.literal("color"),
   name: z.literal("Color"),
-  content: z.object({
-    palette: z
-      .array(
-        z.object({
-          name: z.string().min(1),
-          value: hexColorSchema,
-          role: z.string().min(1),
-        }),
-      )
-      .min(4),
-  }),
+  content: z.object({ palette: colorGenerationSchema.shape.palette }),
 });
 
 const typographyRegionSchema = z.object({
   ...sharedRegionShape,
   id: z.literal("typography"),
   name: z.literal("Typography"),
-  content: z.object({
-    display: z.string().min(1),
-    body: z.string().min(1),
-    fallbacks: z.string().min(1),
-    scale: z.array(z.string().min(1)).min(3),
-    sampleHeadline: z.string().min(1),
-    stylesheetUrl: googleFontStylesheetSchema,
-  }),
+  content: typographyContentSchema,
 });
 
 const voiceRegionSchema = z.object({
   ...sharedRegionShape,
   id: z.literal("voice-and-tone"),
   name: z.literal("Voice and Tone"),
-  content: z.object({
-    promise: z.string().min(1),
-    principles: z.array(z.string().min(1)).length(3),
-    preferredWords: z.array(z.string().min(1)).min(3),
-    avoidedWords: z.array(z.string().min(1)).min(3),
-    headline: z.string().min(1),
-    body: z.string().min(1),
-    callToAction: z.string().min(1),
-  }),
+  content: voiceContentSchema,
 });
 
 const photographyRegionSchema = z.object({
@@ -198,6 +181,8 @@ const fallbackMotion = {
 } as const;
 
 const fallbackCardRadius = "12px";
+const fallbackLogoSvg =
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 80"><title>Morrow mark</title><path fill="#17231F" d="M12 12h56v56H12zM88 24h136v12H88zM88 48h104v10H88z"/></svg>';
 
 export function createFallbackBrandSystem(projectName: string): BrandSystem {
   return brandSystemSchema.parse({
@@ -232,6 +217,9 @@ export function createFallbackBrandSystem(projectName: string): BrandSystem {
           monogram: "M",
           tagline: "Make room for meaningful work.",
           variants: ["Primary lockup", "Wordmark", "Monogram"],
+          primaryLockupSvg: fallbackLogoSvg,
+          wordmarkSvg: fallbackLogoSvg,
+          symbolSvg: fallbackLogoSvg,
         },
       },
       {
@@ -247,15 +235,41 @@ export function createFallbackBrandSystem(projectName: string): BrandSystem {
         ],
         content: {
           palette: [
-            { name: "Ink", value: fallbackTheme.ink, role: "Foundation" },
+            {
+              name: "Ink",
+              value: fallbackTheme.ink,
+              role: "Foundation",
+              usage: "Text and anchoring surfaces",
+              contrast: "pass",
+            },
             {
               name: "Saffron",
               value: fallbackTheme.saffron,
               role: "Primary",
+              usage: "Primary actions",
+              contrast: "pass",
             },
-            { name: "Aloe", value: fallbackTheme.aloe, role: "Support" },
-            { name: "Clay", value: fallbackTheme.clay, role: "Accent" },
-            { name: "Paper", value: fallbackTheme.paper, role: "Surface" },
+            {
+              name: "Aloe",
+              value: fallbackTheme.aloe,
+              role: "Support",
+              usage: "Quiet supporting fields",
+              contrast: "pass",
+            },
+            {
+              name: "Clay",
+              value: fallbackTheme.clay,
+              role: "Accent",
+              usage: "Short emphasis",
+              contrast: "warning",
+            },
+            {
+              name: "Paper",
+              value: fallbackTheme.paper,
+              role: "Surface",
+              usage: "Primary background",
+              contrast: "pass",
+            },
           ],
         },
       },
@@ -274,8 +288,15 @@ export function createFallbackBrandSystem(projectName: string): BrandSystem {
         content: {
           display: fallbackTypography.display,
           body: fallbackTypography.body,
-          fallbacks: "Georgia, serif · Arial, sans-serif",
-          scale: ["Display 72/68", "Heading 36/40", "Body 18/28"],
+          displayFallbacks: ["Georgia", "serif"],
+          bodyFallbacks: ["Arial", "sans-serif"],
+          displayWeights: [400, 600],
+          bodyWeights: [400, 500, 600],
+          scale: [
+            { name: "Display", size: "72px", lineHeight: "68px", weight: 600 },
+            { name: "Heading", size: "36px", lineHeight: "40px", weight: 600 },
+            { name: "Body", size: "18px", lineHeight: "28px", weight: 400 },
+          ],
           sampleHeadline: "A clearer way forward.",
           stylesheetUrl: fallbackTypography.stylesheetUrl,
         },
@@ -304,6 +325,10 @@ export function createFallbackBrandSystem(projectName: string): BrandSystem {
           headline: "A clearer way forward.",
           body: "Bring the moving parts together and make space for the work that matters.",
           callToAction: "Find your next step",
+          beforeAfter: {
+            before: "Transform everything effortlessly.",
+            after: "Make the next step clear.",
+          },
         },
       },
       {
@@ -415,4 +440,171 @@ export function createFallbackBrandSystem(projectName: string): BrandSystem {
       },
     ],
   });
+}
+
+export type ProgressiveGenerationData = {
+  generationStage?:
+    | "direction"
+    | "logo"
+    | "color"
+    | "typography"
+    | "voice-and-tone"
+    | "ready"
+    | "failed";
+  generationError?: string;
+  directionJson?: string;
+  logoJson?: string;
+  colorJson?: string;
+  typographyJson?: string;
+  voiceJson?: string;
+};
+
+function parseJson<Schema extends z.ZodType>(
+  json: string | undefined,
+  schema: Schema,
+): z.infer<Schema> | null {
+  if (!json) {
+    return null;
+  }
+  try {
+    const parsed = schema.safeParse(JSON.parse(json));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
+
+function progressiveState(
+  id: "logo" | "color" | "typography" | "voice-and-tone",
+  stage: ProgressiveGenerationData["generationStage"],
+  hasResult: boolean,
+  hasError: boolean,
+): BrandRegion["state"] {
+  if (hasResult) {
+    return "ready";
+  }
+  if (stage === id) {
+    return hasError ? "failed" : "generating";
+  }
+  return "unfinished";
+}
+
+export function createProgressiveBrandSystem(
+  projectName: string,
+  generation: ProgressiveGenerationData,
+) {
+  if (!(generation.generationStage || generation.directionJson)) {
+    return createFallbackBrandSystem(projectName);
+  }
+
+  const fallback = createFallbackBrandSystem(projectName);
+  const direction = parseJson(generation.directionJson, brandDirectionSchema);
+  const logo = parseJson(generation.logoJson, logoGenerationSchema);
+  const color = parseJson(generation.colorJson, colorGenerationSchema);
+  const typography = parseJson(
+    generation.typographyJson,
+    typographyGenerationSchema,
+  );
+  const voice = parseJson(generation.voiceJson, voiceGenerationSchema);
+
+  const regions = fallback.regions.map((region): BrandRegion => {
+    switch (region.id) {
+      case "logo":
+        return {
+          ...region,
+          state: progressiveState(
+            "logo",
+            generation.generationStage,
+            !!logo,
+            !!generation.generationError,
+          ),
+          ...(logo
+            ? {
+                summary: logo.summary,
+                rules: logo.rules,
+                content: {
+                  wordmark: logo.wordmark,
+                  monogram: logo.monogram,
+                  tagline: logo.tagline,
+                  variants: ["Primary lockup", "Wordmark", "Symbol"],
+                  primaryLockupSvg: logo.primaryLockupSvg,
+                  wordmarkSvg: logo.wordmarkSvg,
+                  symbolSvg: logo.symbolSvg,
+                },
+              }
+            : {}),
+        };
+      case "color":
+        return {
+          ...region,
+          state: progressiveState(
+            "color",
+            generation.generationStage,
+            !!color,
+            !!generation.generationError,
+          ),
+          ...(color
+            ? {
+                summary: color.summary,
+                rules: color.rules,
+                content: { palette: color.palette },
+              }
+            : {}),
+        };
+      case "typography":
+        return {
+          ...region,
+          state: progressiveState(
+            "typography",
+            generation.generationStage,
+            !!typography,
+            !!generation.generationError,
+          ),
+          ...(typography
+            ? {
+                summary: typography.summary,
+                rules: typography.rules,
+                content: typography,
+              }
+            : {}),
+        };
+      case "voice-and-tone":
+        return {
+          ...region,
+          state: progressiveState(
+            "voice-and-tone",
+            generation.generationStage,
+            !!voice,
+            !!generation.generationError,
+          ),
+          ...(voice
+            ? { summary: voice.summary, rules: voice.rules, content: voice }
+            : {}),
+        };
+      default:
+        return region;
+    }
+  }) as BrandSystem["regions"];
+
+  const generatedTheme = color
+    ? {
+        ...fallback.theme,
+        ink: color.palette[0]?.value ?? fallback.theme.ink,
+        saffron: color.palette[1]?.value ?? fallback.theme.saffron,
+        aloe: color.palette[2]?.value ?? fallback.theme.aloe,
+        clay: color.palette[3]?.value ?? fallback.theme.clay,
+        paper: color.palette[4]?.value ?? fallback.theme.paper,
+      }
+    : fallback.theme;
+
+  return brandSystemSchema.parse({
+    ...fallback,
+    direction: direction ?? fallback.direction,
+    theme: generatedTheme,
+    regions,
+  });
+}
+
+export function getValidatedDirectionName(directionJson?: string) {
+  return parseJson(directionJson, brandDirectionSchema)?.name ?? null;
 }

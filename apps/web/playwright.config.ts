@@ -1,6 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const port = process.env.PLAYWRIGHT_PORT ?? "3001";
+
 export default defineConfig({
+  globalSetup: "./tests/global-setup.ts",
   testDir: "./tests",
   timeout: 60_000,
   fullyParallel: false,
@@ -10,7 +13,7 @@ export default defineConfig({
     timeout: 15_000,
   },
   use: {
-    baseURL: "http://localhost:3001",
+    baseURL: `http://localhost:${port}`,
     trace: "on-first-retry",
   },
   projects: [
@@ -20,8 +23,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "pnpm dev --host 127.0.0.1",
-    url: "http://localhost:3001",
-    reuseExistingServer: false,
+    command: `pnpm dev --host 127.0.0.1 --port ${port}`,
+    url: `http://localhost:${port}`,
+    reuseExistingServer: !process.env.CI,
   },
 });

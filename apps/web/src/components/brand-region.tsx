@@ -1,3 +1,4 @@
+import { Spinner } from "@sandcastle/ui/components/spinner";
 import { cn } from "@sandcastle/ui/lib/utils";
 import type { CSSProperties, MouseEvent } from "react";
 
@@ -34,27 +35,35 @@ function LogoRegion({
 }: {
   region: Extract<BrandRegion, { id: "logo" }>;
 }) {
+  const variants = [
+    ["Primary lockup", region.content.primaryLockupSvg],
+    ["Wordmark", region.content.wordmarkSvg],
+    ["Symbol", region.content.symbolSvg],
+  ] as const;
+
   return (
     <div className="flex h-full flex-col bg-[var(--brand-paper)] p-8">
       <RegionLabel region={region} />
-      <div className="flex flex-1 items-center justify-center gap-6">
-        <div className="brand-display flex size-24 rotate-3 items-center justify-center rounded-[44%_56%_46%_54%] bg-[var(--brand-saffron)] text-5xl text-[var(--brand-ink)]">
-          {region.content.monogram}
-        </div>
-        <div className="flex flex-col gap-2">
-          <p className="brand-display text-6xl text-[var(--brand-ink)] tracking-[-0.06em]">
-            {region.content.wordmark}
-          </p>
-          <p className="text-[var(--brand-muted)] text-sm tracking-[0.08em]">
-            {region.content.tagline}
-          </p>
-        </div>
-      </div>
-      <div className="flex items-center justify-between border-[var(--brand-ink)]/15 border-t pt-4 text-[var(--brand-muted)] text-xs">
-        {region.content.variants.map((variant) => (
-          <span key={variant}>{variant}</span>
+      <div className="my-5 grid flex-1 grid-cols-3 gap-4">
+        {variants.map(([label, svg]) => (
+          <figure
+            className="flex min-w-0 flex-col justify-center gap-3"
+            key={label}
+          >
+            <img
+              src={`data:image/svg+xml,${encodeURIComponent(svg)}`}
+              alt={`${region.content.wordmark} ${label.toLowerCase()}`}
+              className="h-24 w-full object-contain"
+            />
+            <figcaption className="text-center text-[var(--brand-muted)] text-xs">
+              {label}
+            </figcaption>
+          </figure>
         ))}
       </div>
+      <p className="border-[var(--brand-ink)]/15 border-t pt-4 text-center text-[var(--brand-muted)] text-xs tracking-[0.08em]">
+        {region.content.tagline}
+      </p>
     </div>
   );
 }
@@ -80,6 +89,7 @@ function ColorRegion({
           >
             <strong className="text-[10px]">{color.name}</strong>
             <span className="text-[9px] opacity-80">{color.value}</span>
+            <span className="text-[9px] opacity-80">{color.contrast}</span>
           </div>
         ))}
       </div>
@@ -107,11 +117,31 @@ function TypographyRegion({
             {region.content.display}
           </strong>
           <span>Display</span>
+          <span>{region.content.displayWeights.join(", ")}</span>
           <strong className="mt-3 text-[var(--brand-ink)]">
             {region.content.body}
           </strong>
           <span>Text</span>
+          <span>{region.content.bodyWeights.join(", ")}</span>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function PendingRegion({ region }: { region: BrandRegion }) {
+  return (
+    <div className="flex h-full flex-col bg-[var(--brand-surface)] p-7">
+      <RegionLabel region={region} />
+      <div className="m-auto flex max-w-64 flex-col items-center gap-3 text-center">
+        {region.state === "generating" ? <Spinner className="size-5" /> : null}
+        <p className="font-medium text-[var(--brand-ink)] text-sm">
+          {region.state === "generating"
+            ? `The Brand Agent is creating ${region.name}.`
+            : region.state === "failed"
+              ? `${region.name} could not be generated.`
+              : `${region.name} will follow the regions before it.`}
+        </p>
       </div>
     </div>
   );
@@ -279,6 +309,10 @@ function DesignTokensRegion({
 }
 
 function BrandRegionContent({ region }: { region: BrandRegion }) {
+  if (region.state !== "ready") {
+    return <PendingRegion region={region} />;
+  }
+
   switch (region.id) {
     case "logo":
       return <LogoRegion region={region} />;

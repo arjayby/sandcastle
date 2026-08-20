@@ -24,7 +24,9 @@ import {
 import BrandRegionCard from "@/components/brand-region";
 import {
   type BrandRegion,
-  createFallbackBrandSystem,
+  createProgressiveBrandSystem,
+  getValidatedDirectionName,
+  type ProgressiveGenerationData,
 } from "@/lib/brand-system";
 
 const CANVAS_PADDING = 48;
@@ -50,19 +52,88 @@ function clampScale(scale: number) {
   return Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale));
 }
 
+function RegionDetails({ region }: { region: BrandRegion }) {
+  switch (region.id) {
+    case "logo":
+      return (
+        <p className="mt-4 text-muted-foreground text-xs">
+          Primary lockup · Wordmark · Symbol
+        </p>
+      );
+    case "color":
+      return (
+        <ul className="mt-4 flex flex-col gap-2 text-xs">
+          {region.content.palette.map((color) => (
+            <li key={color.name} className="grid grid-cols-[1fr_auto] gap-3">
+              <span>
+                <strong>{color.name}</strong> · {color.role}
+                <span className="block text-muted-foreground">
+                  {color.usage}
+                </span>
+              </span>
+              <span className="font-mono uppercase">{color.contrast}</span>
+            </li>
+          ))}
+        </ul>
+      );
+    case "typography":
+      return (
+        <div className="mt-4 flex flex-col gap-3 text-xs">
+          <p>
+            <strong>{region.content.display}</strong> · weights{" "}
+            {region.content.displayWeights.join(", ")} · fallbacks{" "}
+            {region.content.displayFallbacks.join(", ")}
+          </p>
+          <p>
+            <strong>{region.content.body}</strong> · weights{" "}
+            {region.content.bodyWeights.join(", ")} · fallbacks{" "}
+            {region.content.bodyFallbacks.join(", ")}
+          </p>
+          <ul className="flex flex-col gap-1 text-muted-foreground">
+            {region.content.scale.map((step) => (
+              <li key={step.name}>
+                {step.name}: {step.size}/{step.lineHeight}, {step.weight}
+              </li>
+            ))}
+          </ul>
+        </div>
+      );
+    case "voice-and-tone":
+      return (
+        <div className="mt-4 flex flex-col gap-2 text-xs">
+          <p>
+            <strong>Prefer:</strong> {region.content.preferredWords.join(", ")}
+          </p>
+          <p>
+            <strong>Avoid:</strong> {region.content.avoidedWords.join(", ")}
+          </p>
+          <p className="text-muted-foreground line-through">
+            {region.content.beforeAfter.before}
+          </p>
+          <p>{region.content.beforeAfter.after}</p>
+        </div>
+      );
+    default:
+      return null;
+  }
+}
+
 export default function BrandSystemCanvas({
   projectName,
   description,
+  generation,
   onSignOut,
 }: {
   projectName: string;
   description: string;
+  generation: ProgressiveGenerationData;
   onSignOut: () => void;
 }) {
   const brandSystem = useMemo(
-    () => createFallbackBrandSystem(projectName),
-    [projectName],
+    () => createProgressiveBrandSystem(projectName, generation),
+    [generation, projectName],
   );
+  const directionName = getValidatedDirectionName(generation.directionJson);
   const viewportRef = useRef<HTMLDivElement>(null);
   const inspectorRef = useRef<HTMLElement>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -97,9 +168,11 @@ export default function BrandSystemCanvas({
     "--brand-paper": brandSystem.theme.paper,
     "--brand-surface": brandSystem.theme.surface,
     "--brand-muted": brandSystem.theme.muted,
-    "--brand-font-display": `"${typographyRegion.content.display}", Georgia, serif`,
+    "--brand-font-display": `"${typographyRegion.content.display}", ${typographyRegion.content.displayFallbacks.join(", ")}`,
+    "--brand-font-body": `"${typographyRegion.content.body}", ${typographyRegion.content.bodyFallbacks.join(", ")}`,
     "--brand-motion-duration": motionRegion.content.duration,
     "--brand-motion-easing": motionRegion.content.easing,
+    fontFamily: "var(--brand-font-body)",
   } as CSSProperties;
 
   const fitBrandSystem = useCallback(() => {
@@ -300,7 +373,7 @@ export default function BrandSystemCanvas({
             {projectName} Brand System
           </h1>
           <p className="hidden truncate text-muted-foreground text-xs md:block">
-            {description}
+            {directionName ? `${directionName} · ${description}` : description}
           </p>
         </div>
         <div className="flex items-center gap-1 rounded-md border bg-background p-1">
@@ -461,6 +534,7 @@ export default function BrandSystemCanvas({
             <p className="mt-3 text-muted-foreground text-sm">
               {selectedRegion.summary}
             </p>
+            <RegionDetails region={selectedRegion} />
             <Separator className="my-5" />
             <ul className="flex list-disc flex-col gap-3 pl-4 text-sm leading-relaxed">
               {selectedRegion.rules.map((rule) => (

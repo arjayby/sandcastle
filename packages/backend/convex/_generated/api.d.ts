@@ -10,6 +10,9 @@
 
 import type * as agent from "../agent.js";
 import type * as auth from "../auth.js";
+import type * as brandGeneration from "../brandGeneration.js";
+import type * as brandGenerationContract from "../brandGenerationContract.js";
+import type * as brandGenerationProviders from "../brandGenerationProviders.js";
 import type * as brandProjects from "../brandProjects.js";
 import type * as chat from "../chat.js";
 import type * as healthCheck from "../healthCheck.js";
@@ -26,6 +29,9 @@ import type {
 declare const fullApi: ApiFromModules<{
   agent: typeof agent;
   auth: typeof auth;
+  brandGeneration: typeof brandGeneration;
+  brandGenerationContract: typeof brandGenerationContract;
+  brandGenerationProviders: typeof brandGenerationProviders;
   brandProjects: typeof brandProjects;
   chat: typeof chat;
   healthCheck: typeof healthCheck;
