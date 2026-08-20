@@ -16,6 +16,8 @@ import type * as brandGenerationProviders from "../brandGenerationProviders.js";
 import type * as brandGenerationValidators from "../brandGenerationValidators.js";
 import type * as brandOperationContract from "../brandOperationContract.js";
 import type * as brandProjects from "../brandProjects.js";
+import type * as brandRevision from "../brandRevision.js";
+import type * as brandRevisionContract from "../brandRevisionContract.js";
 import type * as chat from "../chat.js";
 import type * as healthCheck from "../healthCheck.js";
 import type * as http from "../http.js";
@@ -38,6 +40,8 @@ declare const fullApi: ApiFromModules<{
   brandGenerationValidators: typeof brandGenerationValidators;
   brandOperationContract: typeof brandOperationContract;
   brandProjects: typeof brandProjects;
+  brandRevision: typeof brandRevision;
+  brandRevisionContract: typeof brandRevisionContract;
   chat: typeof chat;
   healthCheck: typeof healthCheck;
   http: typeof http;

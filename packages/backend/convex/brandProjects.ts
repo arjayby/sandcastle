@@ -20,6 +20,7 @@ import {
   photographRoleValidator,
 } from "./brandGenerationValidators";
 import { claimBrandProjectOperation } from "./brandOperationContract";
+import { getSemanticRevisionRegions } from "./brandRevisionContract";
 
 const appliedGenerationStages = new Set([
   "motion",
@@ -46,6 +47,8 @@ const brandProjectFields = {
   generationError: v.optional(v.string()),
   activeOperationId: v.optional(v.string()),
   activeOperationKind: v.optional(operationKindValidator),
+  revisingRegionIds: v.optional(v.array(brandRegionIdValidator)),
+  revisionError: v.optional(v.string()),
   generationRecoveryCount: v.optional(v.number()),
   builtInFallback: v.optional(v.boolean()),
   directionJson: v.optional(v.string()),
@@ -158,10 +161,26 @@ function getCopyableBrandProjectData(project: Doc<"brandProjects">) {
     draftId,
     name,
     updatedAt,
+    activeOperationId,
+    activeOperationKind,
+    revisingRegionIds,
+    revisionError,
     reviewToken,
     ...copyableData
   } = project;
-  void [_id, _creationTime, ownerId, draftId, name, updatedAt, reviewToken];
+  void [
+    _id,
+    _creationTime,
+    ownerId,
+    draftId,
+    name,
+    updatedAt,
+    activeOperationId,
+    activeOperationKind,
+    revisingRegionIds,
+    revisionError,
+    reviewToken,
+  ];
   return copyableData;
 }
 
@@ -380,9 +399,10 @@ export const duplicate = mutation({
   handler: async (ctx, { projectId }) => {
     const ownerId = await getOwnerId(ctx);
     const project = await getOwnedBrandProject(ctx, ownerId, projectId);
-    const copiedOperation = project.activeOperationId
-      ? claimBrandProjectOperation(null, "generation", crypto.randomUUID())
-      : null;
+    const copiedOperation =
+      project.activeOperationId && project.activeOperationKind !== "revision"
+        ? claimBrandProjectOperation(null, "generation", crypto.randomUUID())
+        : null;
 
     const copiedProjectId = await ctx.db.insert("brandProjects", {
       ...getCopyableBrandProjectData(project),
@@ -526,6 +546,82 @@ export const retryRegion = mutation({
         operationId: operation.id,
       },
     );
+    return null;
+  },
+});
+
+export const revise = mutation({
+  args: {
+    projectId: v.id("brandProjects"),
+    request: v.string(),
+    region: v.optional(brandRegionIdValidator),
+  },
+  returns: v.null(),
+  handler: async (ctx, { projectId, request, region }) => {
+    const ownerId = await getOwnerId(ctx);
+    const project = await getOwnedBrandProject(ctx, ownerId, projectId);
+    const normalizedRequest = request.trim();
+    if (!normalizedRequest) {
+      throw new ConvexError("A Semantic Revision request is required");
+    }
+    if (project.generationStage !== "ready") {
+      throw new ConvexError(
+        "Semantic Revision is available when every Brand Region is ready",
+      );
+    }
+    const requiredResults = [
+      project.directionJson,
+      project.logoJson,
+      project.colorJson,
+      project.typographyJson,
+      project.voiceJson,
+      project.photographyDirectionJson,
+      project.motionJson,
+      project.interfaceJson,
+      project.designTokensJson,
+    ];
+    const photographs = await ctx.db
+      .query("brandPhotographs")
+      .withIndex("by_project_and_role", (q) => q.eq("projectId", projectId))
+      .take(photographRoles.length);
+    if (
+      requiredResults.some((result) => !result) ||
+      photographs.length !== photographRoles.length ||
+      photographs.some((photograph) => photograph.state !== "ready")
+    ) {
+      throw new ConvexError(
+        "Semantic Revision is available when every Brand Region is ready",
+      );
+    }
+    const operation = claimBrandProjectOperation(
+      project.activeOperationId
+        ? {
+            id: project.activeOperationId,
+            kind: project.activeOperationKind ?? "generation",
+          }
+        : null,
+      "revision",
+      crypto.randomUUID(),
+    );
+    const target = region ?? null;
+    const revisingRegionIds = getSemanticRevisionRegions(
+      target,
+      normalizedRequest,
+    );
+    await ctx.db.patch(projectId, {
+      activeOperationId: operation.id,
+      activeOperationKind: operation.kind,
+      revisingRegionIds,
+      revisionError: undefined,
+      updatedAt: Date.now(),
+    });
+    await ctx.scheduler.runAfter(0, internal.brandRevision.revise, {
+      projectId,
+      ownerId,
+      operationId: operation.id,
+      request: normalizedRequest,
+      target,
+    });
     return null;
   },
 });

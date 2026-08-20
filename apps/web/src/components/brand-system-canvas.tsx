@@ -1,6 +1,14 @@
+import { directBrandRegionDependencies } from "@sandcastle/backend/convex/brandRevisionContract";
 import { Button, buttonVariants } from "@sandcastle/ui/components/button";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@sandcastle/ui/components/field";
 import { Separator } from "@sandcastle/ui/components/separator";
 import { Spinner } from "@sandcastle/ui/components/spinner";
+import { Textarea } from "@sandcastle/ui/components/textarea";
 import { cn } from "@sandcastle/ui/lib/utils";
 import { Link } from "@tanstack/react-router";
 import {
@@ -12,6 +20,7 @@ import {
   MinusIcon,
   PackageOpenIcon,
   ScanIcon,
+  SparklesIcon,
   XIcon,
   ZoomInIcon,
 } from "lucide-react";
@@ -57,6 +66,17 @@ type DragState = {
   startY: number;
   originX: number;
   originY: number;
+};
+
+const brandRegionNames: Record<BrandRegion["id"], string> = {
+  logo: "Logo",
+  color: "Color",
+  typography: "Typography",
+  "voice-and-tone": "Voice and Tone",
+  photography: "Photography",
+  motion: "Motion",
+  "interface-foundation": "Interface Foundation",
+  "design-tokens": "Design Tokens",
 };
 
 function clampScale(scale: number) {
@@ -158,6 +178,86 @@ function CopyArtifactList({
         </div>
       ))}
     </div>
+  );
+}
+
+function SemanticRevisionForm({
+  targetName,
+  dependencies,
+  disabled,
+  onSubmit,
+}: {
+  targetName: string;
+  dependencies: readonly BrandRegion["id"][];
+  disabled: boolean;
+  onSubmit: (request: string) => Promise<unknown>;
+}) {
+  const [request, setRequest] = useState("");
+  const [isPending, setIsPending] = useState(false);
+  const completeSystem = targetName === "complete Brand System";
+
+  async function applyRevision(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const normalizedRequest = request.trim();
+    if (!normalizedRequest || disabled || isPending) {
+      return;
+    }
+    setIsPending(true);
+    try {
+      await onSubmit(normalizedRequest);
+      setRequest("");
+      toast.success(
+        completeSystem
+          ? "Complete Brand System revision started"
+          : `${targetName} revision started`,
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not start Semantic Revision",
+      );
+    } finally {
+      setIsPending(false);
+    }
+  }
+
+  return (
+    <form className="mt-5" onSubmit={applyRevision}>
+      <FieldGroup>
+        <Field data-disabled={disabled || isPending}>
+          <FieldLabel htmlFor={`revision-${targetName}`}>
+            Semantic Revision
+          </FieldLabel>
+          <Textarea
+            id={`revision-${targetName}`}
+            aria-label={`Revision request for ${targetName}`}
+            value={request}
+            disabled={disabled || isPending}
+            placeholder="Describe the change in brand or design language."
+            onChange={(event) => setRequest(event.target.value)}
+          />
+          <FieldDescription>
+            {completeSystem
+              ? "The Brand Agent will update the complete Brand System and preserve coherence."
+              : dependencies.length > 0
+                ? `Direct dependencies will update too: ${dependencies.map((dependency) => brandRegionNames[dependency]).join(", ")}.`
+                : "The Brand Agent will apply the result directly to this Brand Region."}
+          </FieldDescription>
+        </Field>
+        <Button
+          type="submit"
+          disabled={disabled || isPending || !request.trim()}
+        >
+          {isPending ? (
+            <Spinner data-icon="inline-start" />
+          ) : (
+            <SparklesIcon data-icon="inline-start" />
+          )}
+          Apply {targetName} revision
+        </Button>
+      </FieldGroup>
+    </form>
   );
 }
 
@@ -409,6 +509,7 @@ export default function BrandSystemCanvas({
   description,
   generation,
   onRetryRegion,
+  onRevise,
   onLoadBuiltInFallback,
   onSignOut,
   toolbarAction,
@@ -417,6 +518,7 @@ export default function BrandSystemCanvas({
   description: string;
   generation: ProgressiveGenerationData;
   onRetryRegion?: (region: BrandRegion["id"]) => Promise<unknown>;
+  onRevise?: (request: string, region?: BrandRegion["id"]) => Promise<unknown>;
   onLoadBuiltInFallback?: () => Promise<unknown>;
   onSignOut?: () => void;
   toolbarAction?: React.ReactNode;
@@ -438,6 +540,7 @@ export default function BrandSystemCanvas({
   const [selectedRegionId, setSelectedRegionId] = useState<
     BrandRegion["id"] | null
   >(null);
+  const [isSystemRevisionOpen, setIsSystemRevisionOpen] = useState(false);
   const [transform, setTransform] = useState<ViewTransform>({
     x: 0,
     y: 0,
@@ -447,6 +550,11 @@ export default function BrandSystemCanvas({
   const selectedRegion = brandSystem.regions.find(
     (region) => region.id === selectedRegionId,
   );
+  const allRegionsReady = brandSystem.regions.every(
+    (region) => region.state === "ready",
+  );
+  const revisionBusy = Boolean(generation.activeOperationId);
+  const revisionAvailable = allRegionsReady && !revisionBusy;
   const typographyRegion = brandSystem.regions.find(
     (region) => region.id === "typography",
   );
@@ -625,6 +733,7 @@ export default function BrandSystemCanvas({
       return;
     }
     event.stopPropagation();
+    setIsSystemRevisionOpen(false);
     setSelectedRegionId(region.id);
   }
 
@@ -691,6 +800,21 @@ export default function BrandSystemCanvas({
           <Button size="sm" onClick={() => void onLoadBuiltInFallback()}>
             <PackageOpenIcon data-icon="inline-start" />
             Use built in fallback
+          </Button>
+        ) : null}
+        {onRevise ? (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!revisionAvailable}
+            aria-label="Revise complete Brand System"
+            onClick={() => {
+              setSelectedRegionId(null);
+              setIsSystemRevisionOpen(true);
+            }}
+          >
+            <SparklesIcon data-icon="inline-start" />
+            <span className="hidden sm:inline">Revise system</span>
           </Button>
         ) : null}
         {toolbarAction}
@@ -764,6 +888,7 @@ export default function BrandSystemCanvas({
             return;
           }
           setSelectedRegionId(null);
+          setIsSystemRevisionOpen(false);
         }}
         onKeyDown={(event) => {
           const panDistance = event.shiftKey ? 100 : 40;
@@ -864,6 +989,15 @@ export default function BrandSystemCanvas({
                 <li key={rule}>{rule}</li>
               ))}
             </ul>
+            {onRevise ? (
+              <SemanticRevisionForm
+                key={selectedRegion.id}
+                targetName={selectedRegion.name}
+                dependencies={directBrandRegionDependencies[selectedRegion.id]}
+                disabled={!revisionAvailable}
+                onSubmit={(request) => onRevise(request, selectedRegion.id)}
+              />
+            ) : null}
             <Button
               className="mt-6 w-full"
               variant="outline"
@@ -872,6 +1006,42 @@ export default function BrandSystemCanvas({
               <FocusIcon data-icon="inline-start" />
               Focus {selectedRegion.name}
             </Button>
+          </aside>
+        ) : null}
+        {!selectedRegion && isSystemRevisionOpen && onRevise ? (
+          <aside
+            ref={inspectorRef}
+            aria-label="Brand System revision inspector"
+            className="absolute right-3 bottom-3 left-3 max-h-[42%] overflow-auto border bg-background p-5 shadow-xl md:top-3 md:bottom-3 md:left-auto md:max-h-none md:w-80"
+            onPointerDown={(event) => event.stopPropagation()}
+            onWheel={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col gap-1">
+                <p className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+                  Semantic Revision
+                </p>
+                <h2 className="font-semibold text-lg">Complete Brand System</h2>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Close system revision inspector"
+                onClick={() => setIsSystemRevisionOpen(false)}
+              >
+                <XIcon />
+              </Button>
+            </div>
+            <p className="mt-3 text-muted-foreground text-sm">
+              Request one coherent change across every Brand Region. Valid
+              results apply directly.
+            </p>
+            <SemanticRevisionForm
+              targetName="complete Brand System"
+              dependencies={[]}
+              disabled={!revisionAvailable}
+              onSubmit={(request) => onRevise(request)}
+            />
           </aside>
         ) : null}
       </div>

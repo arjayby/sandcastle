@@ -507,6 +507,10 @@ export type ProgressiveGenerationData = {
     | "ready"
     | "failed";
   generationError?: string;
+  activeOperationId?: string;
+  activeOperationKind?: "generation" | "revision";
+  revisingRegionIds?: BrandRegion["id"][];
+  revisionError?: string;
   builtInFallback?: boolean;
   directionJson?: string;
   logoJson?: string;
@@ -811,12 +815,18 @@ export function createProgressiveBrandSystem(
         paper: colorForRole("surface") ?? fallback.theme.paper,
       }
     : fallback.theme;
+  const revisingRegionIds = new Set(generation.revisingRegionIds ?? []);
+  const visibleRegions = regions.map((region) =>
+    revisingRegionIds.has(region.id)
+      ? { ...region, state: "revising" as const }
+      : region,
+  ) as BrandSystem["regions"];
 
   return brandSystemSchema.parse({
     ...fallback,
     direction: direction ?? fallback.direction,
     theme: generatedTheme,
-    regions,
+    regions: visibleRegions,
   });
 }
 

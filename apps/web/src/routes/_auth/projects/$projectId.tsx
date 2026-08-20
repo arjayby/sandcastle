@@ -23,6 +23,7 @@ function BrandProjectPage() {
   const { projectId } = Route.useParams();
   const brandProjectId = projectId as Id<"brandProjects">;
   const retryRegion = useMutation(api.brandProjects.retryRegion);
+  const revise = useMutation(api.brandProjects.revise);
   const loadBuiltInFallback = useMutation(
     api.brandProjects.loadBuiltInFallback,
   );
@@ -63,6 +64,13 @@ function BrandProjectPage() {
       generation={project}
       onRetryRegion={(region) =>
         retryRegion({ projectId: brandProjectId, region })
+      }
+      onRevise={(request, region) =>
+        revise({
+          projectId: brandProjectId,
+          request,
+          ...(region ? { region } : {}),
+        })
       }
       onLoadBuiltInFallback={() =>
         loadBuiltInFallback({ projectId: brandProjectId })
