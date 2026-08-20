@@ -1,13 +1,5 @@
 import { api } from "@sandcastle/backend/convex/_generated/api";
 import type { Id } from "@sandcastle/backend/convex/_generated/dataModel";
-import { Button, buttonVariants } from "@sandcastle/ui/components/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@sandcastle/ui/components/card";
 import {
 	Empty,
 	EmptyDescription,
@@ -15,10 +7,11 @@ import {
 	EmptyTitle,
 } from "@sandcastle/ui/components/empty";
 import { Skeleton } from "@sandcastle/ui/components/skeleton";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "convex/react";
 
 import BrandCanvas from "@/components/brand-canvas";
+import BrandSystemCanvas from "@/components/brand-system-canvas";
 import { authClient } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/_auth/projects/$projectId")({
@@ -58,31 +51,10 @@ function BrandProjectPage() {
 	}
 
 	return (
-		<BrandCanvas>
-			<div className="m-auto flex w-full max-w-4xl flex-col gap-4">
-				<div className="flex items-center justify-between gap-4">
-					<Link
-						to="/dashboard"
-						className={buttonVariants({ variant: "outline" })}
-					>
-						All Brand Projects
-					</Link>
-					<Button variant="ghost" onClick={() => authClient.signOut()}>
-						Sign out
-					</Button>
-				</div>
-				<Card>
-					<CardHeader>
-						<CardTitle>
-							<h1>{project.name ?? project.companyName}</h1>
-						</CardTitle>
-						<CardDescription>Brand Brief</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<p>{project.description}</p>
-					</CardContent>
-				</Card>
-			</div>
-		</BrandCanvas>
+		<BrandSystemCanvas
+			projectName={project.name ?? project.companyName}
+			description={project.description}
+			onSignOut={() => authClient.signOut()}
+		/>
 	);
 }
