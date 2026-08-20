@@ -17,6 +17,9 @@ const REGION_NAMES = [
 test("a Brand Builder can create, authenticate, reopen, and persist an owned Brand Project", async ({
   page,
 }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem("sandcastle.brandAgentProvider", "controlled");
+  });
   const runId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const ownerEmail = `owner-${runId}@example.com`;
   const otherOwnerEmail = `other-${runId}@example.com`;
@@ -62,6 +65,30 @@ test("a Brand Builder can create, authenticate, reopen, and persist an owned Bra
   await expect(
     page.getByRole("region", { name: "Brand System board" }),
   ).toBeVisible();
+
+  await expect(page.getByText("Northstar signal")).toBeVisible();
+  const progressiveLogo = page.getByRole("button", {
+    name: "Logo Brand Region",
+  });
+  const progressiveColor = page.getByRole("button", {
+    name: "Color Brand Region",
+  });
+  const progressiveTypography = page.getByRole("button", {
+    name: "Typography Brand Region",
+  });
+  const progressiveVoice = page.getByRole("button", {
+    name: "Voice and Tone Brand Region",
+  });
+
+  await expect(progressiveLogo.getByText("Generating")).toBeVisible();
+  await expect(progressiveColor.getByText("Unfinished")).toBeVisible();
+  await expect(progressiveLogo.getByText("Ready")).toBeVisible();
+  await expect(progressiveColor.getByText("Generating")).toBeVisible();
+  await expect(progressiveColor.getByText("Ready")).toBeVisible();
+  await expect(progressiveTypography.getByText("Generating")).toBeVisible();
+  await expect(progressiveTypography.getByText("Ready")).toBeVisible();
+  await expect(progressiveVoice.getByText("Generating")).toBeVisible();
+  await expect(progressiveVoice.getByText("Ready")).toBeVisible();
 
   for (const regionName of REGION_NAMES) {
     await expect(
@@ -172,7 +199,7 @@ test("a Brand Builder can create, authenticate, reopen, and persist an owned Bra
   });
   await expect(inspector.getByRole("heading", { name: "Color" })).toBeVisible();
   await expect(
-    inspector.getByText("Saffron leads every primary action."),
+    inspector.getByText("Use Signal Gold for the primary action."),
   ).toBeVisible();
 
   const colorBeforeFocus = await color.boundingBox();
@@ -279,6 +306,9 @@ test("a Brand Builder can create, authenticate, reopen, and persist an owned Bra
 });
 
 test("a Brand Builder can manage multiple Brand Projects", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem("sandcastle.brandAgentProvider", "controlled");
+  });
   const runId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const email = `portfolio-${runId}@example.com`;
   const password = "sandcastle-test-password";

@@ -9,6 +9,7 @@
     "serve": "vite preview",
     "start": "vite",
     "test": "playwright test",
+    "test:unit": "vitest run --config vitest.config.ts",
     "check-types": "vite build && tsc --noEmit"
   },
   "dependencies": {
@@ -47,6 +48,7 @@
     "postcss": "^8.5.24",
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
+    "vitest": "^3.2.4",
     "vite": "^8.1.5"
   }
 }

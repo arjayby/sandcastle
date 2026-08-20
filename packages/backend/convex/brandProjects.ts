@@ -3,7 +3,7 @@ import {
   paginationResultValidator,
 } from "convex/server";
 import { ConvexError, v } from "convex/values";
-
+import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
@@ -17,6 +17,23 @@ const brandProjectValidator = v.object({
   companyName: v.string(),
   description: v.string(),
   updatedAt: v.number(),
+  generationStage: v.optional(
+    v.union(
+      v.literal("direction"),
+      v.literal("logo"),
+      v.literal("color"),
+      v.literal("typography"),
+      v.literal("voice-and-tone"),
+      v.literal("ready"),
+      v.literal("failed"),
+    ),
+  ),
+  generationError: v.optional(v.string()),
+  directionJson: v.optional(v.string()),
+  logoJson: v.optional(v.string()),
+  colorJson: v.optional(v.string()),
+  typographyJson: v.optional(v.string()),
+  voiceJson: v.optional(v.string()),
 });
 
 async function getOwnerId(
@@ -82,6 +99,7 @@ export const create = mutation({
     draftId: v.string(),
     companyName: v.string(),
     description: v.string(),
+    provider: v.optional(v.union(v.literal("live"), v.literal("controlled"))),
   },
   returns: v.id("brandProjects"),
   handler: async (ctx, args) => {
@@ -99,13 +117,22 @@ export const create = mutation({
       return existingProject._id;
     }
 
-    return await ctx.db.insert("brandProjects", {
+    const projectId = await ctx.db.insert("brandProjects", {
       ownerId,
       draftId: args.draftId,
       name: brandBrief.companyName,
       ...brandBrief,
       updatedAt: Date.now(),
+      generationStage: "direction",
     });
+
+    await ctx.scheduler.runAfter(0, internal.brandGeneration.generate, {
+      projectId,
+      ownerId,
+      provider: args.provider ?? "live",
+    });
+
+    return projectId;
   },
 });
 
