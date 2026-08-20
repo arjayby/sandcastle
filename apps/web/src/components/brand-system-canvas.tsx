@@ -19,8 +19,10 @@ import {
   type LucideIcon,
   MinusIcon,
   PackageOpenIcon,
+  Redo2Icon,
   ScanIcon,
   SparklesIcon,
+  Undo2Icon,
   XIcon,
   ZoomInIcon,
 } from "lucide-react";
@@ -510,6 +512,10 @@ export default function BrandSystemCanvas({
   generation,
   onRetryRegion,
   onRevise,
+  canUndo = false,
+  canRedo = false,
+  onUndo,
+  onRedo,
   onLoadBuiltInFallback,
   onSignOut,
   toolbarAction,
@@ -519,6 +525,10 @@ export default function BrandSystemCanvas({
   generation: ProgressiveGenerationData;
   onRetryRegion?: (region: BrandRegion["id"]) => Promise<unknown>;
   onRevise?: (request: string, region?: BrandRegion["id"]) => Promise<unknown>;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onUndo?: () => Promise<unknown>;
+  onRedo?: () => Promise<unknown>;
   onLoadBuiltInFallback?: () => Promise<unknown>;
   onSignOut?: () => void;
   toolbarAction?: React.ReactNode;
@@ -541,6 +551,9 @@ export default function BrandSystemCanvas({
     BrandRegion["id"] | null
   >(null);
   const [isSystemRevisionOpen, setIsSystemRevisionOpen] = useState(false);
+  const [revisionNavigationPending, setRevisionNavigationPending] = useState<
+    "undo" | "redo" | null
+  >(null);
   const [transform, setTransform] = useState<ViewTransform>({
     x: 0,
     y: 0,
@@ -724,6 +737,26 @@ export default function BrandSystemCanvas({
     setIsPanning(false);
   }
 
+  async function navigateRevision(direction: "undo" | "redo") {
+    const navigate = direction === "undo" ? onUndo : onRedo;
+    if (!navigate || revisionNavigationPending) {
+      return;
+    }
+
+    setRevisionNavigationPending(direction);
+    try {
+      await navigate();
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : `Could not ${direction} Revision`,
+      );
+    } finally {
+      setRevisionNavigationPending(null);
+    }
+  }
+
   function selectRegion(
     region: BrandRegion,
     event: React.MouseEvent<HTMLElement>,
@@ -816,6 +849,32 @@ export default function BrandSystemCanvas({
             <SparklesIcon data-icon="inline-start" />
             <span className="hidden sm:inline">Revise system</span>
           </Button>
+        ) : null}
+        {onUndo && onRedo ? (
+          <div className="flex items-center gap-1 rounded-md border bg-background p-1">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Undo Revision"
+              disabled={
+                revisionBusy || revisionNavigationPending !== null || !canUndo
+              }
+              onClick={() => void navigateRevision("undo")}
+            >
+              <Undo2Icon />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Redo Revision"
+              disabled={
+                revisionBusy || revisionNavigationPending !== null || !canRedo
+              }
+              onClick={() => void navigateRevision("redo")}
+            >
+              <Redo2Icon />
+            </Button>
+          </div>
         ) : null}
         {toolbarAction}
         <div className="flex items-center gap-1 rounded-md border bg-background p-1">

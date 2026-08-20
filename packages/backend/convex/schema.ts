@@ -7,6 +7,7 @@ import {
   operationKindValidator,
   photographRoleValidator,
 } from "./brandGenerationValidators";
+import { brandRevisionSnapshotValidator } from "./brandRevisionSnapshotContract";
 
 export default defineSchema({
   brandProjects: defineTable({
@@ -34,6 +35,8 @@ export default defineSchema({
     interfaceJson: v.optional(v.string()),
     designTokensJson: v.optional(v.string()),
     reviewToken: v.optional(v.string()),
+    revisionCursor: v.optional(v.number()),
+    revisionSequence: v.optional(v.number()),
   })
     .index("by_owner_and_updated_at", ["ownerId", "updatedAt"])
     .index("by_owner_and_draft", ["ownerId", "draftId"])
@@ -52,5 +55,17 @@ export default defineSchema({
     error: v.optional(v.string()),
   })
     .index("by_project_and_role", ["projectId", "role"])
+    .index("by_storage_id", ["storageId"]),
+  revisions: defineTable({
+    projectId: v.id("brandProjects"),
+    sequence: v.number(),
+    before: brandRevisionSnapshotValidator,
+    after: brandRevisionSnapshotValidator,
+  }).index("by_project_and_sequence", ["projectId", "sequence"]),
+  revisionStorageReferences: defineTable({
+    revisionId: v.id("revisions"),
+    storageId: v.id("_storage"),
+  })
+    .index("by_revision", ["revisionId"])
     .index("by_storage_id", ["storageId"]),
 });

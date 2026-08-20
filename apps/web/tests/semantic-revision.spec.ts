@@ -40,6 +40,10 @@ test("a Brand Builder can apply regional and complete Semantic Revisions coheren
     timeout: 30_000,
   });
   await expect(reviseSystem).toBeEnabled();
+  const undo = page.getByRole("button", { name: "Undo Revision" });
+  const redo = page.getByRole("button", { name: "Redo Revision" });
+  await expect(undo).toBeDisabled();
+  await expect(redo).toBeDisabled();
 
   const photographUrlsBefore = await photography
     .getByRole("img")
@@ -95,9 +99,46 @@ test("a Brand Builder can apply regional and complete Semantic Revisions coheren
       ),
   ).toEqual(photographUrlsBefore);
 
-  await regionInspector
-    .getByRole("button", { name: "Close inspector" })
+  await expect(undo).toBeEnabled();
+  await expect(redo).toBeDisabled();
+  await undo.click();
+  await expect(color.getByText("#EDB33F", { exact: true })).toBeVisible();
+  await expect(designTokens.getByLabel("CSS design tokens")).toContainText(
+    "--color-primary: #EDB33F",
+  );
+  await expect(
+    interfaceFoundation.getByText("Find the clearest way forward."),
+  ).toBeVisible();
+  await expect(undo).toBeDisabled();
+  await expect(redo).toBeEnabled();
+
+  await page.reload();
+  await expect(redo).toBeEnabled();
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Create your account" }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Already have an account? Sign in" })
     .click();
+  await page.getByLabel("Email").fill(`revision-${runId}@example.com`);
+  await page.getByLabel("Password").fill("sandcastle-test-password");
+  await page.getByRole("button", { name: "Sign In" }).click();
+  await expect(
+    page.getByRole("heading", { name: `${companyName} Brand System` }),
+  ).toBeVisible({ timeout: 30_000 });
+  await expect(redo).toBeEnabled();
+  await redo.click();
+  await expect(color.getByText("#3F6FED", { exact: true })).toBeVisible();
+  await expect(designTokens.getByLabel("CSS design tokens")).toContainText(
+    "--color-primary: #3F6FED",
+  );
+  await expect(
+    interfaceFoundation.getByText("Move with a clearer horizon."),
+  ).toBeVisible();
+  await expect(undo).toBeEnabled();
+  await expect(redo).toBeDisabled();
+
   await reviseSystem.click();
   const systemInspector = page.getByRole("complementary", {
     name: "Brand System revision inspector",
