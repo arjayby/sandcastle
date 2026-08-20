@@ -13,12 +13,15 @@ import { Spinner } from "@sandcastle/ui/components/spinner";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import CredentialsFields from "@/components/credentials-fields";
 import { authClient } from "@/lib/auth-client";
 
 export default function SignUpForm({
 	onSwitchToSignIn,
+	hasBrandBrief,
 }: {
 	onSwitchToSignIn: () => void;
+	hasBrandBrief: boolean;
 }) {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -29,7 +32,9 @@ export default function SignUpForm({
 					<h1>Create your account</h1>
 				</CardTitle>
 				<CardDescription>
-					Your Brand Brief is ready and will be saved after sign up.
+					{hasBrandBrief
+						? "Your Brand Brief is ready and will be saved after sign up."
+						: "Create an account to continue to your Brand Projects."}
 				</CardDescription>
 			</CardHeader>
 			<form
@@ -70,27 +75,10 @@ export default function SignUpForm({
 								required
 							/>
 						</Field>
-						<Field>
-							<FieldLabel htmlFor="sign-up-email">Email</FieldLabel>
-							<Input
-								id="sign-up-email"
-								name="email"
-								type="email"
-								autoComplete="email"
-								required
-							/>
-						</Field>
-						<Field>
-							<FieldLabel htmlFor="sign-up-password">Password</FieldLabel>
-							<Input
-								id="sign-up-password"
-								name="password"
-								type="password"
-								autoComplete="new-password"
-								minLength={8}
-								required
-							/>
-						</Field>
+						<CredentialsFields
+							idPrefix="sign-up"
+							passwordAutoComplete="new-password"
+						/>
 					</FieldGroup>
 				</CardContent>
 				<CardFooter className="mt-4 flex flex-col gap-2">

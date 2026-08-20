@@ -10,6 +10,19 @@ async function getOwnerId(
 	return owner._id;
 }
 
+function normalizeBrandBrief(companyName: string, description: string) {
+	const normalizedBrandBrief = {
+		companyName: companyName.trim(),
+		description: description.trim(),
+	};
+
+	if (!normalizedBrandBrief.companyName || !normalizedBrandBrief.description) {
+		throw new ConvexError("A company name and description are required");
+	}
+
+	return normalizedBrandBrief;
+}
+
 export const create = mutation({
 	args: {
 		draftId: v.string(),
@@ -18,12 +31,7 @@ export const create = mutation({
 	},
 	handler: async (ctx, args) => {
 		const ownerId = await getOwnerId(ctx);
-		const companyName = args.companyName.trim();
-		const description = args.description.trim();
-
-		if (!companyName || !description) {
-			throw new ConvexError("A company name and description are required");
-		}
+		const brandBrief = normalizeBrandBrief(args.companyName, args.description);
 
 		const existingProject = await ctx.db
 			.query("brandProjects")
@@ -39,8 +47,7 @@ export const create = mutation({
 		return await ctx.db.insert("brandProjects", {
 			ownerId,
 			draftId: args.draftId,
-			companyName,
-			description,
+			...brandBrief,
 			updatedAt: Date.now(),
 		});
 	},
@@ -81,15 +88,10 @@ export const updateBrief = mutation({
 			throw new ConvexError("Brand Project not found");
 		}
 
-		const normalizedCompanyName = companyName.trim();
-		const normalizedDescription = description.trim();
-		if (!normalizedCompanyName || !normalizedDescription) {
-			throw new ConvexError("A company name and description are required");
-		}
+		const brandBrief = normalizeBrandBrief(companyName, description);
 
 		await ctx.db.patch(projectId, {
-			companyName: normalizedCompanyName,
-			description: normalizedDescription,
+			...brandBrief,
 			updatedAt: Date.now(),
 		});
 	},

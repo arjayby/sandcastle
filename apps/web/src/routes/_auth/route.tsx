@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import SignInForm from "@/components/sign-in-form";
 import SignUpForm from "@/components/sign-up-form";
+import { loadBrandBriefDraft } from "@/lib/brand-brief-draft";
 
 export const Route = createFileRoute("/_auth")({
 	component: AuthLayout,
@@ -12,6 +13,7 @@ export const Route = createFileRoute("/_auth")({
 
 function AuthLayout() {
 	const [showSignIn, setShowSignIn] = useState(false);
+	const [hasBrandBrief] = useState(() => loadBrandBriefDraft() !== null);
 
 	return (
 		<>
@@ -22,7 +24,10 @@ function AuthLayout() {
 				{showSignIn ? (
 					<SignInForm onSwitchToSignUp={() => setShowSignIn(false)} />
 				) : (
-					<SignUpForm onSwitchToSignIn={() => setShowSignIn(true)} />
+					<SignUpForm
+						hasBrandBrief={hasBrandBrief}
+						onSwitchToSignIn={() => setShowSignIn(true)}
+					/>
 				)}
 			</Unauthenticated>
 			<AuthLoading>

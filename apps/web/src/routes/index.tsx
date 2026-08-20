@@ -18,6 +18,7 @@ import { Textarea } from "@sandcastle/ui/components/textarea";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
+import BrandCanvas from "@/components/brand-canvas";
 import { saveBrandBriefDraft } from "@/lib/brand-brief-draft";
 
 export const Route = createFileRoute("/")({
@@ -33,8 +34,8 @@ function HomeComponent() {
 	const [description, setDescription] = useState("");
 
 	return (
-		<main className="flex items-center justify-center p-6 md:p-12">
-			<Card className="w-full max-w-2xl">
+		<BrandCanvas>
+			<Card className="m-auto w-full max-w-2xl">
 				<CardHeader>
 					<CardTitle>
 						<h1>Start with your Brand Brief</h1>
@@ -87,6 +88,6 @@ function HomeComponent() {
 					</CardFooter>
 				</form>
 			</Card>
-		</main>
+		</BrandCanvas>
 	);
 }

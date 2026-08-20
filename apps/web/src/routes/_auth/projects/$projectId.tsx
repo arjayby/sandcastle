@@ -18,6 +18,7 @@ import { Skeleton } from "@sandcastle/ui/components/skeleton";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "convex/react";
 
+import BrandCanvas from "@/components/brand-canvas";
 import { authClient } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/_auth/projects/$projectId")({
@@ -32,31 +33,33 @@ function BrandProjectPage() {
 
 	if (project === undefined) {
 		return (
-			<main className="p-6 md:p-12">
+			<BrandCanvas>
 				<Skeleton className="mx-auto h-64 w-full max-w-4xl" />
-			</main>
+			</BrandCanvas>
 		);
 	}
 
 	if (project === null) {
 		return (
-			<Empty>
-				<EmptyHeader>
-					<EmptyTitle>
-						<h1>Brand Project not found</h1>
-					</EmptyTitle>
-					<EmptyDescription>
-						This Brand Project does not exist or belongs to another Brand
-						Builder.
-					</EmptyDescription>
-				</EmptyHeader>
-			</Empty>
+			<BrandCanvas>
+				<Empty>
+					<EmptyHeader>
+						<EmptyTitle>
+							<h1>Brand Project not found</h1>
+						</EmptyTitle>
+						<EmptyDescription>
+							This Brand Project does not exist or belongs to another Brand
+							Builder.
+						</EmptyDescription>
+					</EmptyHeader>
+				</Empty>
+			</BrandCanvas>
 		);
 	}
 
 	return (
-		<main className="p-6 md:p-12">
-			<div className="mx-auto flex max-w-4xl flex-col gap-4">
+		<BrandCanvas>
+			<div className="m-auto flex w-full max-w-4xl flex-col gap-4">
 				<div className="flex items-center justify-between gap-4">
 					<Button variant="outline" render={<Link to="/dashboard" />}>
 						All Brand Projects
@@ -77,6 +80,6 @@ function BrandProjectPage() {
 					</CardContent>
 				</Card>
 			</div>
-		</main>
+		</BrandCanvas>
 	);
 }

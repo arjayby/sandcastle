@@ -7,12 +7,11 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@sandcastle/ui/components/card";
-import { Field, FieldGroup, FieldLabel } from "@sandcastle/ui/components/field";
-import { Input } from "@sandcastle/ui/components/input";
 import { Spinner } from "@sandcastle/ui/components/spinner";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import CredentialsFields from "@/components/credentials-fields";
 import { authClient } from "@/lib/auth-client";
 
 export default function SignInForm({
@@ -58,29 +57,10 @@ export default function SignInForm({
 				}}
 			>
 				<CardContent>
-					<FieldGroup>
-						<Field>
-							<FieldLabel htmlFor="sign-in-email">Email</FieldLabel>
-							<Input
-								id="sign-in-email"
-								name="email"
-								type="email"
-								autoComplete="email"
-								required
-							/>
-						</Field>
-						<Field>
-							<FieldLabel htmlFor="sign-in-password">Password</FieldLabel>
-							<Input
-								id="sign-in-password"
-								name="password"
-								type="password"
-								autoComplete="current-password"
-								minLength={8}
-								required
-							/>
-						</Field>
-					</FieldGroup>
+					<CredentialsFields
+						idPrefix="sign-in"
+						passwordAutoComplete="current-password"
+					/>
 				</CardContent>
 				<CardFooter className="mt-4 flex flex-col gap-2">
 					<Button type="submit" className="w-full" disabled={isSubmitting}>

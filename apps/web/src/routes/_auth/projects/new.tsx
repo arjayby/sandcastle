@@ -1,6 +1,13 @@
 import { api } from "@sandcastle/backend/convex/_generated/api";
 import { Button } from "@sandcastle/ui/components/button";
 import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@sandcastle/ui/components/card";
+import {
 	Empty,
 	EmptyContent,
 	EmptyDescription,
@@ -12,6 +19,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation } from "convex/react";
 import { useEffect, useState } from "react";
 
+import BrandCanvas from "@/components/brand-canvas";
 import {
 	clearBrandBriefDraft,
 	loadBrandBriefDraft,
@@ -77,11 +85,23 @@ function CreateBrandProject() {
 	}
 
 	return (
-		<main className="flex items-center justify-center p-6">
-			<div className="flex items-center gap-2" role="status">
-				{error ? null : <Spinner />}
-				<p>{error ?? "Creating your Brand Project..."}</p>
-			</div>
-		</main>
+		<BrandCanvas>
+			<Card className="m-auto w-full max-w-2xl">
+				<CardHeader>
+					<CardTitle>{draft.companyName}</CardTitle>
+					<CardDescription>Brand Brief</CardDescription>
+				</CardHeader>
+				<CardContent className="flex flex-col gap-4">
+					<p>{draft.description}</p>
+					<div
+						className="flex items-center gap-2"
+						role={error ? "alert" : "status"}
+					>
+						{error ? null : <Spinner />}
+						<p>{error ?? "Creating your Brand Project..."}</p>
+					</div>
+				</CardContent>
+			</Card>
+		</BrandCanvas>
 	);
 }
