@@ -14,6 +14,19 @@ import {
   operationKindValidator,
   photographRoleValidator,
 } from "./brandGenerationValidators";
+import { claimBrandProjectOperation } from "./brandOperationContract";
+
+const appliedGenerationStages = new Set([
+  "motion",
+  "interface-foundation",
+  "design-tokens",
+]);
+
+function generationActionForStage(stage: string | undefined) {
+  return stage && appliedGenerationStages.has(stage)
+    ? internal.brandGeneration.generateAppliedRegions
+    : internal.brandGeneration.generate;
+}
 
 const brandProjectFields = {
   _id: v.id("brandProjects"),
@@ -134,6 +147,11 @@ export const create = mutation({
       return existingProject._id;
     }
 
+    const operation = claimBrandProjectOperation(
+      null,
+      "generation",
+      crypto.randomUUID(),
+    );
     const projectId = await ctx.db.insert("brandProjects", {
       ownerId,
       draftId: args.draftId,
@@ -141,20 +159,15 @@ export const create = mutation({
       ...brandBrief,
       updatedAt: Date.now(),
       generationStage: "direction",
-      activeOperationId: crypto.randomUUID(),
-      activeOperationKind: "generation",
+      activeOperationId: operation.id,
+      activeOperationKind: operation.kind,
       generationRecoveryCount: 0,
     });
-
-    const project = await ctx.db.get(projectId);
-    if (!project?.activeOperationId) {
-      throw new ConvexError("Brand generation operation could not start");
-    }
 
     await ctx.scheduler.runAfter(0, internal.brandGeneration.generate, {
       projectId,
       ownerId,
-      operationId: project.activeOperationId,
+      operationId: operation.id,
     });
 
     return projectId;
@@ -268,9 +281,9 @@ export const duplicate = mutation({
   handler: async (ctx, { projectId }) => {
     const ownerId = await getOwnerId(ctx);
     const project = await getOwnedBrandProject(ctx, ownerId, projectId);
-    const copiedOperationId = project.activeOperationId
-      ? crypto.randomUUID()
-      : undefined;
+    const copiedOperation = project.activeOperationId
+      ? claimBrandProjectOperation(null, "generation", crypto.randomUUID())
+      : null;
 
     const copiedProjectId = await ctx.db.insert("brandProjects", {
       ...getCopyableBrandProjectData(project),
@@ -278,7 +291,8 @@ export const duplicate = mutation({
       draftId: crypto.randomUUID(),
       name: `${project.name ?? project.companyName} copy`,
       updatedAt: Date.now(),
-      activeOperationId: copiedOperationId,
+      activeOperationId: copiedOperation?.id,
+      activeOperationKind: copiedOperation?.kind,
     });
     const photographs = await ctx.db
       .query("brandPhotographs")
@@ -292,7 +306,7 @@ export const duplicate = mutation({
             ...photograph,
             projectId: copiedProjectId,
           });
-          if (photograph.state === "generating" && copiedOperationId) {
+          if (photograph.state === "generating" && copiedOperation) {
             await ctx.scheduler.runAfter(
               0,
               internal.brandGeneration.generatePhotograph,
@@ -300,26 +314,23 @@ export const duplicate = mutation({
                 projectId: copiedProjectId,
                 ownerId,
                 role: photograph.role,
-                operationId: copiedOperationId,
+                operationId: copiedOperation.id,
               },
             );
           }
         },
       ),
     );
-    if (copiedOperationId && project.generationStage !== "photography") {
-      const action = [
-        "motion",
-        "interface-foundation",
-        "design-tokens",
-      ].includes(project.generationStage ?? "")
-        ? internal.brandGeneration.generateAppliedRegions
-        : internal.brandGeneration.generate;
-      await ctx.scheduler.runAfter(0, action, {
-        projectId: copiedProjectId,
-        ownerId,
-        operationId: copiedOperationId,
-      });
+    if (copiedOperation && project.generationStage !== "photography") {
+      await ctx.scheduler.runAfter(
+        0,
+        generationActionForStage(project.generationStage),
+        {
+          projectId: copiedProjectId,
+          ownerId,
+          operationId: copiedOperation.id,
+        },
+      );
     }
 
     return copiedProjectId;
@@ -335,11 +346,12 @@ export const retryRegion = mutation({
   handler: async (ctx, { projectId, region }) => {
     const ownerId = await getOwnerId(ctx);
     const project = await getOwnedBrandProject(ctx, ownerId, projectId);
-    if (project.activeOperationId) {
-      throw new ConvexError(
-        "Another generation or revision operation is already active",
-      );
-    }
+    const activeOperation = project.activeOperationId
+      ? {
+          id: project.activeOperationId,
+          kind: project.activeOperationKind ?? ("generation" as const),
+        }
+      : null;
     if (!project.generationError || project.builtInFallback) {
       throw new ConvexError("This Brand Region is not waiting for recovery");
     }
@@ -363,10 +375,14 @@ export const retryRegion = mutation({
       throw new ConvexError("Only the failed Brand Region can be retried");
     }
 
-    const operationId = crypto.randomUUID();
+    const operation = claimBrandProjectOperation(
+      activeOperation,
+      "generation",
+      crypto.randomUUID(),
+    );
     await ctx.db.patch(projectId, {
-      activeOperationId: operationId,
-      activeOperationKind: "generation",
+      activeOperationId: operation.id,
+      activeOperationKind: operation.kind,
       generationError: undefined,
       generationRecoveryCount: (project.generationRecoveryCount ?? 0) + 1,
       updatedAt: Date.now(),
@@ -391,22 +407,26 @@ export const retryRegion = mutation({
         await ctx.scheduler.runAfter(
           0,
           internal.brandGeneration.generatePhotograph,
-          { projectId, ownerId, role: photograph.role, operationId },
+          {
+            projectId,
+            ownerId,
+            role: photograph.role,
+            operationId: operation.id,
+          },
         );
       }
       return null;
     }
 
-    const action = ["motion", "interface-foundation", "design-tokens"].includes(
-      project.generationStage,
-    )
-      ? internal.brandGeneration.generateAppliedRegions
-      : internal.brandGeneration.generate;
-    await ctx.scheduler.runAfter(0, action, {
-      projectId,
-      ownerId,
-      operationId,
-    });
+    await ctx.scheduler.runAfter(
+      0,
+      generationActionForStage(project.generationStage),
+      {
+        projectId,
+        ownerId,
+        operationId: operation.id,
+      },
+    );
     return null;
   },
 });
@@ -422,7 +442,7 @@ export const loadBuiltInFallback = mutation({
         "Another generation or revision operation is already active",
       );
     }
-    if (project.generationStage !== "direction" || !project.generationError) {
+    if (project.logoJson || !project.generationError) {
       throw new ConvexError(
         "The built in fallback is available after complete provider failure",
       );

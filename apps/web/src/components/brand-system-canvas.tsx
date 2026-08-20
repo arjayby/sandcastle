@@ -159,8 +159,8 @@ export default function BrandSystemCanvas({
   );
   const directionName = getValidatedDirectionName(generation.directionJson);
   const completeProviderFailure =
-    generation.generationStage === "direction" &&
     !!generation.generationError &&
+    !generation.logoJson &&
     !generation.builtInFallback;
   const viewportRef = useRef<HTMLDivElement>(null);
   const inspectorRef = useRef<HTMLElement>(null);

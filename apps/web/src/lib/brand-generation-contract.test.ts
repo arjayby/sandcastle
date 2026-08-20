@@ -11,6 +11,7 @@ import {
   typographyGenerationSchema,
   validateTypographyWithGoogleFonts,
 } from "@sandcastle/backend/convex/brandGenerationContract";
+import { claimBrandProjectOperation } from "@sandcastle/backend/convex/brandOperationContract";
 import { runProviderRequest } from "@sandcastle/backend/convex/providerResponseContract";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
@@ -100,6 +101,30 @@ describe("Brand Agent provider response contract", () => {
       runProviderRequest({ request, schema: responseSchema, timeoutMs: 100 }),
     ).resolves.toEqual({ ok: true, value: validResponse, attempts: 2 });
     expect(request).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("Brand Project operation contract", () => {
+  test.each([
+    ["generation", "revision"],
+    ["revision", "generation"],
+  ] as const)(
+    "blocks a %s operation while a %s operation is active",
+    (requestedKind, activeKind) => {
+      expect(() =>
+        claimBrandProjectOperation(
+          { id: "active-operation", kind: activeKind },
+          requestedKind,
+          "new-operation",
+        ),
+      ).toThrow("already active");
+    },
+  );
+
+  test("claims an operation when the Brand Project is idle", () => {
+    expect(
+      claimBrandProjectOperation(null, "revision", "new-operation"),
+    ).toEqual({ id: "new-operation", kind: "revision" });
   });
 });
 

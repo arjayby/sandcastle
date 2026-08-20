@@ -115,8 +115,13 @@ describe("Progressive Generation recovery", () => {
 
   test("loads the polished built in fallback through the Brand System contract", () => {
     const system = createProgressiveBrandSystem("Northstar", {
-      generationStage: "direction",
+      generationStage: "logo",
       generationError: "Provider offline",
+      directionJson: JSON.stringify({
+        name: "Incomplete direction",
+        concept: "A direction with no completed visible Brand Region.",
+        attributes: ["Clear", "Steady", "Useful"],
+      }),
       builtInFallback: true,
     });
 

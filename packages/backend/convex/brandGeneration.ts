@@ -716,16 +716,18 @@ export const generate = internalAction({
         direction,
         recoveryCount: context.recoveryCount,
       };
-      const slices = [
+      const generationSteps = [
         ["logo", "color", provider.createLogo],
         ["color", "typography", provider.createColor],
         ["typography", "voice-and-tone", provider.createTypography],
         ["voice-and-tone", "photography-direction", provider.createVoice],
       ] as const;
 
-      const startIndex = slices.findIndex(([region]) => region === stage);
+      const startIndex = generationSteps.findIndex(
+        ([region]) => region === stage,
+      );
       if (startIndex >= 0) {
-        for (const [region, nextStage, createResult] of slices.slice(
+        for (const [region, nextStage, createResult] of generationSteps.slice(
           startIndex,
         )) {
           const result = await requireProviderResult({
