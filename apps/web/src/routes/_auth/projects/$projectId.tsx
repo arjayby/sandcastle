@@ -60,21 +60,7 @@ function BrandProjectPage() {
     <BrandSystemCanvas
       projectName={project.name ?? project.companyName}
       description={project.description}
-      generation={{
-        generationStage: project.generationStage,
-        generationError: project.generationError,
-        builtInFallback: project.builtInFallback,
-        directionJson: project.directionJson,
-        logoJson: project.logoJson,
-        colorJson: project.colorJson,
-        typographyJson: project.typographyJson,
-        voiceJson: project.voiceJson,
-        photographyDirectionJson: project.photographyDirectionJson,
-        photographs: project.photographs,
-        motionJson: project.motionJson,
-        interfaceJson: project.interfaceJson,
-        designTokensJson: project.designTokensJson,
-      }}
+      generation={project}
       onRetryRegion={(region) =>
         retryRegion({ projectId: brandProjectId, region })
       }
