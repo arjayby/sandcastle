@@ -43,6 +43,10 @@ const cssDimensionSchema = safeCssTokenValueSchema.regex(
   /^(?:0|\d+(?:\.\d+)?(?:px|rem|em))$/,
   "Token must be a zero or CSS length value",
 );
+const cssLineHeightSchema = safeCssTokenValueSchema.regex(
+  /^(?:\d+(?:\.\d+)?|\d+(?:\.\d+)?(?:px|rem|em))$/,
+  "Line height must be a unitless number or CSS length value",
+);
 const cssFontStackSchema = safeCssTokenValueSchema.regex(
   /^(?:"[^"]+"|'[^']+'|[A-Za-z][A-Za-z0-9 -]*)(?:\s*,\s*(?:"[^"]+"|'[^']+'|[A-Za-z][A-Za-z0-9 -]*))*$/,
   "Font token must be a valid CSS font family stack",
@@ -187,8 +191,8 @@ export const typographyGenerationSchema = z.object({
     .array(
       z.object({
         name: z.string().trim().min(1),
-        size: z.string().trim().min(1),
-        lineHeight: z.string().trim().min(1),
+        size: cssDimensionSchema,
+        lineHeight: cssLineHeightSchema,
         weight: z.number().int().min(100).max(900),
       }),
     )

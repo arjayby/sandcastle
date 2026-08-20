@@ -5,6 +5,7 @@ import {
   logoGenerationSchema,
   motionGenerationSchema,
   sanitizeGeneratedSvg,
+  typographyGenerationSchema,
   validateTypographyWithGoogleFonts,
 } from "@sandcastle/backend/convex/brandGenerationContract";
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -142,6 +143,18 @@ describe("Google Fonts generation contract", () => {
     await expect(validateTypographyWithGoogleFonts(typography)).rejects.toThrow(
       "Newsreader weight 600",
     );
+  });
+
+  test("rejects type scale values that cannot become CSS tokens", () => {
+    expect(() =>
+      typographyGenerationSchema.parse({
+        ...typography,
+        scale: [
+          ...typography.scale.slice(0, 2),
+          { name: "Body", size: "banana", lineHeight: "soon", weight: 400 },
+        ],
+      }),
+    ).toThrow();
   });
 });
 
