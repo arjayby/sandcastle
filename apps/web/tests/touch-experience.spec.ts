@@ -6,6 +6,8 @@ import {
   test,
 } from "@playwright/test";
 
+import { expectBottomSheet } from "./helpers/responsive";
+
 type TouchPoint = {
   id: number;
   x: number;
@@ -107,6 +109,25 @@ test("touch controls preserve the Brand Canvas across phone, tablet, and desktop
   );
   await inspector.getByRole("button", { name: "Close inspector" }).click();
 
+  await page.setViewportSize({ width: 320, height: 700 });
+  const smallScreenControls = [
+    "All Brand Projects",
+    "Revise complete Brand System",
+    "Share Review Link",
+    "Fit Brand System",
+    "Sign out",
+  ];
+  for (const name of smallScreenControls) {
+    const controlBox = await page
+      .getByLabel(name, { exact: true })
+      .boundingBox();
+    expect(controlBox).not.toBeNull();
+    if (controlBox) {
+      expect(controlBox.x).toBeGreaterThanOrEqual(0);
+      expect(controlBox.x + controlBox.width).toBeLessThanOrEqual(320);
+    }
+  }
+
   await page.setViewportSize({ width: 390, height: 844 });
   const session = await context.newCDPSession(page);
   await page.getByRole("button", { name: "Fit Brand System" }).click();
@@ -190,16 +211,7 @@ test("touch controls preserve the Brand Canvas across phone, tablet, and desktop
   await color
     .getByRole("button", { name: "Inspect Color Brand Region" })
     .click();
-  const phoneInspectorBox = await inspector.boundingBox();
-  expect(phoneInspectorBox).not.toBeNull();
-  if (phoneInspectorBox) {
-    expect(phoneInspectorBox.width).toBeGreaterThan(
-      phoneViewportBox.width * 0.9,
-    );
-    expect(phoneInspectorBox.y).toBeGreaterThan(
-      phoneViewportBox.y + phoneViewportBox.height * 0.35,
-    );
-  }
+  await expectBottomSheet(inspector, viewport);
   await inspector
     .getByLabel("Revision request for Color")
     .fill("Make the primary color cooler.");
@@ -231,18 +243,7 @@ test("touch controls preserve the Brand Canvas across phone, tablet, and desktop
   await color
     .getByRole("button", { name: "Inspect Color Brand Region" })
     .click();
-  const tabletViewportBox = await viewport.boundingBox();
-  const tabletInspectorBox = await inspector.boundingBox();
-  expect(tabletViewportBox).not.toBeNull();
-  expect(tabletInspectorBox).not.toBeNull();
-  if (tabletViewportBox && tabletInspectorBox) {
-    expect(tabletInspectorBox.width).toBeGreaterThan(
-      tabletViewportBox.width * 0.9,
-    );
-    expect(tabletInspectorBox.y).toBeGreaterThan(
-      tabletViewportBox.y + tabletViewportBox.height * 0.35,
-    );
-  }
+  await expectBottomSheet(inspector, viewport);
   await inspector.getByRole("button", { name: "Focus Color" }).click();
   await context.close();
 });

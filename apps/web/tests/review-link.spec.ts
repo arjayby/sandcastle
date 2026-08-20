@@ -5,6 +5,8 @@ import type { Id } from "@sandcastle/backend/convex/_generated/dataModel.js";
 import { ConvexHttpClient } from "convex/browser";
 import { loadEnv } from "vite";
 
+import { expectBottomSheet } from "./helpers/responsive";
+
 const convexUrl = loadEnv(
   "development",
   resolve(import.meta.dirname, ".."),
@@ -97,20 +99,12 @@ test("a Brand Builder can share and revoke an accountless read only Review Link"
   const inspector = reviewerPage.getByRole("complementary", {
     name: "Brand Region inspector",
   });
-  const reviewViewportBox = await reviewerPage
-    .getByRole("application", { name: "Brand Canvas viewport" })
-    .boundingBox();
-  const reviewInspectorBox = await inspector.boundingBox();
-  expect(reviewViewportBox).not.toBeNull();
-  expect(reviewInspectorBox).not.toBeNull();
-  if (reviewViewportBox && reviewInspectorBox) {
-    expect(reviewInspectorBox.width).toBeGreaterThan(
-      reviewViewportBox.width * 0.9,
-    );
-    expect(reviewInspectorBox.y).toBeGreaterThan(
-      reviewViewportBox.y + reviewViewportBox.height * 0.35,
-    );
-  }
+  await expectBottomSheet(
+    inspector,
+    reviewerPage.getByRole("application", {
+      name: "Brand Canvas viewport",
+    }),
+  );
   await inspector.getByRole("button", { name: "Focus Logo" }).click();
   await inspector.getByRole("button", { name: "Copy logo tagline" }).click();
   await expect

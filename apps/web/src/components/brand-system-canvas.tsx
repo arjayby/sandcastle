@@ -926,12 +926,12 @@ export default function BrandSystemCanvas({
 
   return (
     <main
-      className="brand-canvas-shell grid h-full min-h-0 grid-rows-[auto_1fr]"
+      className="brand-canvas-shell grid h-full min-h-0 min-w-0 grid-rows-[auto_1fr]"
       aria-label="Brand Canvas"
       style={brandThemeStyle}
     >
       <link rel="stylesheet" href={typographyRegion.content.stylesheetUrl} />
-      <header className="flex min-h-16 items-center gap-1 border-b bg-background px-3 py-2 sm:gap-3 md:px-4">
+      <header className="flex min-h-16 min-w-0 flex-wrap items-center gap-1 border-b bg-background px-3 py-2 lg:flex-nowrap lg:gap-3 lg:px-4">
         {onSignOut ? (
           <>
             <Link
@@ -944,12 +944,12 @@ export default function BrandSystemCanvas({
               })}
             >
               <ArrowLeftIcon />
-              <span className="hidden sm:inline">All Brand Projects</span>
+              <span className="hidden lg:inline">All Brand Projects</span>
             </Link>
             <Separator orientation="vertical" className="hidden h-7 md:block" />
           </>
         ) : null}
-        <div className="min-w-0 flex-1">
+        <div className="order-first min-w-0 basis-full lg:order-none lg:flex-1 lg:basis-auto">
           <h1 className="truncate font-medium text-sm">
             {projectName} Brand System
           </h1>
@@ -975,7 +975,7 @@ export default function BrandSystemCanvas({
             }}
           >
             <SparklesIcon data-icon="inline-start" />
-            <span className="hidden sm:inline">Revise system</span>
+            <span className="hidden lg:inline">Revise system</span>
           </Button>
         ) : null}
         {toolbarAction}
@@ -990,7 +990,7 @@ export default function BrandSystemCanvas({
           </Button>
           <output
             aria-label="Canvas zoom"
-            className="hidden w-11 text-center font-mono text-muted-foreground text-xs tabular-nums sm:block"
+            className="hidden w-11 text-center font-mono text-muted-foreground text-xs tabular-nums lg:block"
           >
             {Math.round(transform.scale * 100)}%
           </output>
@@ -1009,7 +1009,7 @@ export default function BrandSystemCanvas({
             onClick={fitBrandSystem}
           >
             <ScanIcon data-icon="inline-start" />
-            <span className="hidden sm:inline">Fit</span>
+            <span className="hidden lg:inline">Fit</span>
           </Button>
         </div>
         {onSignOut ? (

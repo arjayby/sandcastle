@@ -97,7 +97,7 @@ export default function ReviewLinkDialog({
         onClick={() => setIsOpen(true)}
       >
         <LinkIcon data-icon="inline-start" />
-        <span className="hidden sm:inline">Share Review Link</span>
+        <span className="hidden lg:inline">Share Review Link</span>
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
