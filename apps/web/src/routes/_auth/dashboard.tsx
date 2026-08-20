@@ -1,49 +1,89 @@
-import { CheckoutLink, CustomerPortalLink } from "@convex-dev/polar/react";
 import { api } from "@sandcastle/backend/convex/_generated/api";
-import { buttonVariants } from "@sandcastle/ui/components/button";
-import { createFileRoute } from "@tanstack/react-router";
+import type { Doc } from "@sandcastle/backend/convex/_generated/dataModel";
+import { Button } from "@sandcastle/ui/components/button";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@sandcastle/ui/components/card";
+import {
+	Empty,
+	EmptyContent,
+	EmptyDescription,
+	EmptyHeader,
+	EmptyTitle,
+} from "@sandcastle/ui/components/empty";
+import { Skeleton } from "@sandcastle/ui/components/skeleton";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "convex/react";
 
 import UserMenu from "@/components/user-menu";
 
 export const Route = createFileRoute("/_auth/dashboard")({
-  component: DashboardContent,
+	component: DashboardContent,
 });
 
 function DashboardContent() {
-  const privateData = useQuery(api.privateData.get);
-  const products = useQuery(api.polar.listAllProducts);
-  const subscription = useQuery(api.polar.getCurrentSubscription);
+	const projects = useQuery(api.brandProjects.list);
 
-  const product = products?.find((product: { isRecurring?: boolean }) => product.isRecurring);
-  const hasActiveSubscription = Boolean(subscription);
+	return (
+		<main className="p-6 md:p-12">
+			<div className="mx-auto flex max-w-5xl flex-col gap-6">
+				<div className="flex items-center justify-between gap-4">
+					<div>
+						<h1 className="font-medium text-2xl">Brand Projects</h1>
+						<p className="text-muted-foreground">
+							Reopen a Brand Project or begin another brief.
+						</p>
+					</div>
+					<UserMenu />
+				</div>
 
-  return (
-    <div>
-      <h1>Dashboard</h1>
-      <p>privateData: {privateData?.message}</p>
-      <p>Plan: {hasActiveSubscription ? "Active" : "Free"}</p>
-      {subscription === undefined ? (
-        <p>Loading subscription options...</p>
-      ) : hasActiveSubscription ? (
-        <CustomerPortalLink polarApi={api.polar} className={buttonVariants({ variant: "outline" })}>
-          Manage Subscription
-        </CustomerPortalLink>
-      ) : products === undefined ? (
-        <p>Loading subscription options...</p>
-      ) : product ? (
-        <CheckoutLink
-          polarApi={api.polar}
-          productIds={[product.id]}
-          embed={false}
-          className={buttonVariants({ variant: "default" })}
-        >
-          Upgrade
-        </CheckoutLink>
-      ) : (
-        <p>No recurring plans available.</p>
-      )}
-      <UserMenu />
-    </div>
-  );
+				{projects === undefined ? (
+					<div className="grid gap-4 md:grid-cols-2">
+						<Skeleton className="h-36" />
+						<Skeleton className="h-36" />
+					</div>
+				) : projects.length === 0 ? (
+					<Empty>
+						<EmptyHeader>
+							<EmptyTitle>No Brand Projects yet</EmptyTitle>
+							<EmptyDescription>
+								Start with a short Brand Brief.
+							</EmptyDescription>
+						</EmptyHeader>
+						<EmptyContent>
+							<Button render={<Link to="/" />}>Create a Brand Project</Button>
+						</EmptyContent>
+					</Empty>
+				) : (
+					<div className="grid gap-4 md:grid-cols-2">
+						{projects.map((project: Doc<"brandProjects">) => (
+							<Card key={project._id}>
+								<CardHeader>
+									<CardTitle>
+										<Link
+											to="/projects/$projectId"
+											params={{ projectId: project._id }}
+											className="underline-offset-4 hover:underline"
+										>
+											{project.companyName}
+										</Link>
+									</CardTitle>
+									<CardDescription>
+										Updated {new Date(project.updatedAt).toLocaleDateString()}
+									</CardDescription>
+								</CardHeader>
+								<CardContent>
+									<p>{project.description}</p>
+								</CardContent>
+							</Card>
+						))}
+					</div>
+				)}
+			</div>
+		</main>
+	);
 }
