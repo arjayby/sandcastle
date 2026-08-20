@@ -428,7 +428,7 @@ export default function BrandRegionCard({
   region: BrandRegion;
   isSelected: boolean;
   onSelect: (event: MouseEvent<HTMLElement>) => void;
-  onRetry: () => void;
+  onRetry?: () => void;
 }) {
   const style: CSSProperties = {
     left: region.frame.x,
@@ -458,7 +458,7 @@ export default function BrandRegionCard({
       >
         <FocusIcon />
       </Button>
-      {region.state === "failed" ? (
+      {region.state === "failed" && onRetry ? (
         <Button
           size="sm"
           className="absolute right-3 bottom-3 z-10"

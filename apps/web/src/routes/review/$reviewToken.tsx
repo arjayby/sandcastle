@@ -1,5 +1,4 @@
 import { api } from "@sandcastle/backend/convex/_generated/api";
-import type { Id } from "@sandcastle/backend/convex/_generated/dataModel";
 import {
   Empty,
   EmptyDescription,
@@ -8,27 +7,18 @@ import {
 } from "@sandcastle/ui/components/empty";
 import { Skeleton } from "@sandcastle/ui/components/skeleton";
 import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
 
 import BrandCanvas from "@/components/brand-canvas";
 import BrandSystemCanvas from "@/components/brand-system-canvas";
-import ReviewLinkDialog from "@/components/review-link-dialog";
-import { authClient } from "@/lib/auth-client";
 
-export const Route = createFileRoute("/_auth/projects/$projectId")({
-  component: BrandProjectPage,
+export const Route = createFileRoute("/review/$reviewToken")({
+  component: ReviewPage,
 });
 
-function BrandProjectPage() {
-  const { projectId } = Route.useParams();
-  const brandProjectId = projectId as Id<"brandProjects">;
-  const retryRegion = useMutation(api.brandProjects.retryRegion);
-  const loadBuiltInFallback = useMutation(
-    api.brandProjects.loadBuiltInFallback,
-  );
-  const project = useQuery(api.brandProjects.get, {
-    projectId: brandProjectId,
-  });
+function ReviewPage() {
+  const { reviewToken } = Route.useParams();
+  const project = useQuery(api.brandProjects.getForReview, { reviewToken });
 
   if (project === undefined) {
     return (
@@ -44,11 +34,10 @@ function BrandProjectPage() {
         <Empty>
           <EmptyHeader>
             <EmptyTitle>
-              <h1>Brand Project not found</h1>
+              <h1>Review Link unavailable</h1>
             </EmptyTitle>
             <EmptyDescription>
-              This Brand Project does not exist or belongs to another Brand
-              Builder.
+              This Review Link is invalid or has been revoked.
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
@@ -75,19 +64,6 @@ function BrandProjectPage() {
         interfaceJson: project.interfaceJson,
         designTokensJson: project.designTokensJson,
       }}
-      onRetryRegion={(region) =>
-        retryRegion({ projectId: brandProjectId, region })
-      }
-      onLoadBuiltInFallback={() =>
-        loadBuiltInFallback({ projectId: brandProjectId })
-      }
-      onSignOut={() => authClient.signOut()}
-      toolbarAction={
-        <ReviewLinkDialog
-          projectId={brandProjectId}
-          reviewToken={project.reviewToken}
-        />
-      }
     />
   );
 }
