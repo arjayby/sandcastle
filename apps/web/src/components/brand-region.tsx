@@ -182,6 +182,13 @@ function PhotographyRegion({
 }: {
   region: Extract<BrandRegion, { id: "photography" }>;
 }) {
+  const roleLabels = {
+    hero: "Hero",
+    product: "Product or service",
+    people: "People and culture",
+    texture: "Texture or abstract",
+  } as const;
+
   return (
     <div className="flex h-full flex-col bg-[var(--brand-surface)] p-7">
       <RegionLabel region={region} />
@@ -189,16 +196,39 @@ function PhotographyRegion({
         {region.content.photographs.map((photograph) => (
           <div
             key={photograph.role}
-            role="img"
-            aria-label={photograph.alt}
-            className="relative overflow-hidden p-4"
-            style={{
-              background: `linear-gradient(135deg, ${photograph.colors[0]} 0%, ${photograph.colors[1]} 48%, ${photograph.colors[2]} 100%)`,
-            }}
+            className="relative flex overflow-hidden bg-[var(--brand-paper)] p-4"
+            style={
+              photograph.colors
+                ? {
+                    background: `linear-gradient(135deg, ${photograph.colors[0]} 0%, ${photograph.colors[1]} 48%, ${photograph.colors[2]} 100%)`,
+                  }
+                : undefined
+            }
           >
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_22%,rgba(255,255,255,0.55),transparent_35%)]" />
+            {photograph.url ? (
+              <img
+                src={photograph.url}
+                alt={photograph.alt}
+                className="absolute inset-0 size-full object-cover"
+              />
+            ) : photograph.colors ? (
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_22%,rgba(255,255,255,0.55),transparent_35%)]" />
+            ) : (
+              <div className="m-auto flex flex-col items-center gap-2 text-center text-[var(--brand-muted)] text-xs">
+                {photograph.state === "generating" ? (
+                  <Spinner className="size-5" />
+                ) : null}
+                <span>
+                  {photograph.state === "failed"
+                    ? "Generation failed"
+                    : photograph.state === "generating"
+                      ? "Generating photograph"
+                      : "Waiting for direction"}
+                </span>
+              </div>
+            )}
             <span className="absolute bottom-3 left-3 rounded-full bg-[var(--brand-paper)]/90 px-2.5 py-1 font-medium text-[10px] text-[var(--brand-ink)]">
-              {photograph.role}
+              {roleLabels[photograph.role]}
             </span>
           </div>
         ))}
@@ -309,6 +339,10 @@ function DesignTokensRegion({
 }
 
 function BrandRegionContent({ region }: { region: BrandRegion }) {
+  if (region.id === "photography" && region.content.photographs.length > 0) {
+    return <PhotographyRegion region={region} />;
+  }
+
   if (region.state !== "ready") {
     return <PendingRegion region={region} />;
   }

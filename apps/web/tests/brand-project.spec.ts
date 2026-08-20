@@ -87,6 +87,39 @@ test("a Brand Builder can create, authenticate, reopen, and persist an owned Bra
   await expect(progressiveVoice.getByText("Generating")).toBeVisible();
   await expect(progressiveVoice.getByText("Ready")).toBeVisible();
 
+  const progressivePhotography = page.getByRole("button", {
+    name: "Photography Brand Region",
+  });
+  await expect(
+    progressivePhotography.getByText("Generating", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    progressivePhotography.getByRole("img", {
+      name: "A small team planning together in a sunlit studio",
+    }),
+  ).toBeVisible();
+  await expect(
+    progressivePhotography.getByRole("img", {
+      name: "Layered paper and graphite under a botanical shadow",
+    }),
+  ).toHaveCount(0);
+  await expect(
+    progressivePhotography.getByRole("img", {
+      name: "A planning tool in use beside handwritten notes",
+    }),
+  ).toBeVisible();
+  await expect(
+    progressivePhotography.getByRole("img", {
+      name: "Two collaborators reviewing a decision together",
+    }),
+  ).toBeVisible();
+  await expect(
+    progressivePhotography.getByRole("img", {
+      name: "Layered paper and graphite under a botanical shadow",
+    }),
+  ).toBeVisible();
+  await expect(progressivePhotography.getByText("Ready")).toBeVisible();
+
   for (const regionName of REGION_NAMES) {
     await expect(
       page.getByRole("button", { name: `${regionName} Brand Region` }),
@@ -267,6 +300,11 @@ test("a Brand Builder can create, authenticate, reopen, and persist an owned Bra
   await page.reload();
   await expect(page.getByRole("heading", { name: companyName })).toBeVisible();
   await expect(page.getByText(description)).toBeVisible();
+  await expect(
+    page
+      .getByRole("button", { name: "Photography Brand Region" })
+      .getByRole("img"),
+  ).toHaveCount(4);
 
   await page.getByRole("button", { name: "Sign out" }).click();
   await page.goto("/dashboard");

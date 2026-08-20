@@ -1,30 +1,31 @@
 import { ConvexError, v } from "convex/values";
 
 import { internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 import {
   internalAction,
   internalMutation,
   internalQuery,
+  type MutationCtx,
 } from "./_generated/server";
 import {
   brandDirectionSchema,
   colorGenerationSchema,
   logoGenerationSchema,
   type ProgressiveRegionId,
+  photographRoles,
+  photographyDirectionSchema,
   typographyGenerationSchema,
   voiceGenerationSchema,
 } from "./brandGenerationContract";
-import { getBrandGenerationProvider } from "./brandGenerationProviders";
-
-const stageValidator = v.union(
-  v.literal("direction"),
-  v.literal("logo"),
-  v.literal("color"),
-  v.literal("typography"),
-  v.literal("voice-and-tone"),
-  v.literal("ready"),
-  v.literal("failed"),
-);
+import {
+  getBrandGenerationProvider,
+  getBrandImageProvider,
+} from "./brandGenerationProviders";
+import {
+  generationStageValidator,
+  photographRoleValidator,
+} from "./brandGenerationValidators";
 
 const regionValidator = v.union(
   v.literal("logo"),
@@ -38,6 +39,15 @@ const generationContextValidator = v.object({
   ownerId: v.string(),
   companyName: v.string(),
   description: v.string(),
+});
+
+const photographGenerationContextValidator = v.object({
+  projectId: v.id("brandProjects"),
+  ownerId: v.string(),
+  companyName: v.string(),
+  description: v.string(),
+  directionJson: v.string(),
+  photographyDirectionJson: v.string(),
 });
 
 function schemaForRegion(region: ProgressiveRegionId) {
@@ -89,7 +99,7 @@ export const saveRegion = internalMutation({
     projectId: v.id("brandProjects"),
     region: regionValidator,
     resultJson: v.string(),
-    nextStage: stageValidator,
+    nextStage: generationStageValidator,
   },
   returns: v.null(),
   handler: async (ctx, { projectId, region, resultJson, nextStage }) => {
@@ -104,6 +114,228 @@ export const saveRegion = internalMutation({
       generationStage: nextStage,
       updatedAt: Date.now(),
     });
+    return null;
+  },
+});
+
+export const startPhotography = internalMutation({
+  args: {
+    projectId: v.id("brandProjects"),
+    ownerId: v.string(),
+    directionJson: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, { projectId, ownerId, directionJson }) => {
+    const direction = photographyDirectionSchema.parse(
+      JSON.parse(directionJson),
+    );
+    const project = await ctx.db.get(projectId);
+    if (!project || project.ownerId !== ownerId) {
+      throw new ConvexError("Brand Project not found");
+    }
+
+    for (const shot of direction.shots) {
+      const existing = await ctx.db
+        .query("brandPhotographs")
+        .withIndex("by_project_and_role", (q) =>
+          q.eq("projectId", projectId).eq("role", shot.role),
+        )
+        .unique();
+      if (!existing) {
+        await ctx.db.insert("brandPhotographs", {
+          projectId,
+          role: shot.role,
+          state: "generating",
+          alt: shot.alt,
+        });
+        await ctx.scheduler.runAfter(
+          0,
+          internal.brandGeneration.generatePhotograph,
+          { projectId, ownerId, role: shot.role },
+        );
+      }
+    }
+
+    await ctx.db.patch(projectId, {
+      photographyDirectionJson: directionJson,
+      generationStage: "photography",
+      updatedAt: Date.now(),
+    });
+    return null;
+  },
+});
+
+export const getPhotographGenerationContext = internalQuery({
+  args: {
+    projectId: v.id("brandProjects"),
+    ownerId: v.string(),
+    role: photographRoleValidator,
+  },
+  returns: v.union(photographGenerationContextValidator, v.null()),
+  handler: async (ctx, { projectId, ownerId, role }) => {
+    const project = await ctx.db.get(projectId);
+    const record = await ctx.db
+      .query("brandPhotographs")
+      .withIndex("by_project_and_role", (q) =>
+        q.eq("projectId", projectId).eq("role", role),
+      )
+      .unique();
+    if (
+      !project ||
+      project.ownerId !== ownerId ||
+      !project.directionJson ||
+      !project.photographyDirectionJson ||
+      !record ||
+      record.state !== "generating"
+    ) {
+      return null;
+    }
+    return {
+      projectId,
+      ownerId,
+      companyName: project.companyName,
+      description: project.description,
+      directionJson: project.directionJson,
+      photographyDirectionJson: project.photographyDirectionJson,
+    };
+  },
+});
+
+async function finishPhotographyIfComplete(
+  ctx: MutationCtx,
+  projectId: Id<"brandProjects">,
+) {
+  const photographs = await ctx.db
+    .query("brandPhotographs")
+    .withIndex("by_project_and_role", (q) => q.eq("projectId", projectId))
+    .take(photographRoles.length);
+  if (
+    photographs.length === photographRoles.length &&
+    photographs.every((photograph) => photograph.state !== "generating")
+  ) {
+    await ctx.db.patch(projectId, {
+      generationStage: "ready",
+      updatedAt: Date.now(),
+    });
+  }
+}
+
+export const savePhotograph = internalMutation({
+  args: {
+    projectId: v.id("brandProjects"),
+    role: photographRoleValidator,
+    storageId: v.id("_storage"),
+    mediaType: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, { projectId, role, storageId, mediaType }) => {
+    const photograph = await ctx.db
+      .query("brandPhotographs")
+      .withIndex("by_project_and_role", (q) =>
+        q.eq("projectId", projectId).eq("role", role),
+      )
+      .unique();
+    if (!photograph) {
+      throw new ConvexError("Brand Photograph not found");
+    }
+    await ctx.db.patch(photograph._id, {
+      state: "ready",
+      storageId,
+      mediaType,
+    });
+    await finishPhotographyIfComplete(ctx, projectId);
+    return null;
+  },
+});
+
+export const failPhotograph = internalMutation({
+  args: {
+    projectId: v.id("brandProjects"),
+    role: photographRoleValidator,
+    error: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, { projectId, role, error }) => {
+    const photograph = await ctx.db
+      .query("brandPhotographs")
+      .withIndex("by_project_and_role", (q) =>
+        q.eq("projectId", projectId).eq("role", role),
+      )
+      .unique();
+    if (photograph) {
+      await ctx.db.patch(photograph._id, { state: "failed", error });
+      await finishPhotographyIfComplete(ctx, projectId);
+    }
+    return null;
+  },
+});
+
+export const generatePhotograph = internalAction({
+  args: {
+    projectId: v.id("brandProjects"),
+    ownerId: v.string(),
+    role: photographRoleValidator,
+  },
+  returns: v.null(),
+  handler: async (ctx, { projectId, ownerId, role }) => {
+    const context = await ctx.runQuery(
+      internal.brandGeneration.getPhotographGenerationContext,
+      { projectId, ownerId, role },
+    );
+    if (!context) {
+      return null;
+    }
+
+    let storageId: Id<"_storage"> | null = null;
+    try {
+      const direction = brandDirectionSchema.parse(
+        JSON.parse(context.directionJson),
+      );
+      const photographyDirection = photographyDirectionSchema.parse(
+        JSON.parse(context.photographyDirectionJson),
+      );
+      const shot = photographyDirection.shots.find(
+        (candidate) => candidate.role === role,
+      );
+      if (!shot) {
+        throw new Error(`Photography direction is missing ${role}`);
+      }
+      const image = await getBrandImageProvider().createPhotograph(
+        { ...context, direction },
+        photographyDirection,
+        shot,
+      );
+      if (
+        !image.mediaType.startsWith("image/") ||
+        image.data.byteLength === 0 ||
+        image.data.byteLength > 20_000_000
+      ) {
+        throw new Error("Image provider returned an invalid photograph");
+      }
+      const storedData = Uint8Array.from(image.data);
+      storageId = await ctx.storage.store(
+        new Blob([storedData.buffer], { type: image.mediaType }),
+      );
+      await ctx.runMutation(internal.brandGeneration.savePhotograph, {
+        projectId,
+        role,
+        storageId,
+        mediaType: image.mediaType,
+      });
+    } catch (error) {
+      if (storageId) {
+        await ctx.storage.delete(storageId);
+      }
+      await ctx.runMutation(internal.brandGeneration.failPhotograph, {
+        projectId,
+        role,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Brand Photograph generation failed",
+      });
+    }
+
     return null;
   },
 });
@@ -161,7 +393,7 @@ export const generate = internalAction({
         ],
         [
           "voice-and-tone",
-          "ready",
+          "photography-direction",
           () => provider.createVoice(ctx, directedContext),
         ],
       ] as const;
@@ -175,6 +407,15 @@ export const generate = internalAction({
           nextStage,
         });
       }
+
+      const photographyDirection = photographyDirectionSchema.parse(
+        await provider.createPhotographyDirection(ctx, directedContext),
+      );
+      await ctx.runMutation(internal.brandGeneration.startPhotography, {
+        projectId,
+        ownerId,
+        directionJson: JSON.stringify(photographyDirection),
+      });
     } catch (error) {
       await ctx.runMutation(internal.brandGeneration.markFailed, {
         projectId,

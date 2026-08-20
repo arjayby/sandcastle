@@ -131,11 +131,92 @@ export const voiceGenerationSchema = z.object({
   }),
 });
 
+export const photographRoles = [
+  "hero",
+  "product",
+  "people",
+  "texture",
+] as const;
+
+export const photographRoleSchema = z.enum(photographRoles);
+
+const photographShotSchema = z.object({
+  role: photographRoleSchema,
+  subject: z.string().trim().min(1),
+  composition: z.string().trim().min(1),
+  alt: z.string().trim().min(1),
+});
+
+export const photographyDirectionSchema = z
+  .object({
+    summary: z.string().trim().min(1),
+    aesthetic: z.string().trim().min(1),
+    lighting: z.string().trim().min(1),
+    palette: z.array(z.string().trim().min(1)).min(3),
+    rules: nonEmptyStringArray,
+    shots: z.array(photographShotSchema).length(photographRoles.length),
+  })
+  .refine(
+    (direction) =>
+      photographRoles.every(
+        (role) =>
+          direction.shots.filter((shot) => shot.role === role).length === 1,
+      ),
+    "Photography direction must contain one shot for each required role",
+  );
+
+export const brandPhotographInspectionSchema = z.object({
+  hasUnintendedText: z.boolean(),
+  hasVisibleWatermark: z.boolean(),
+  hasThirdPartyBranding: z.boolean(),
+  notes: z.string().trim().min(1),
+});
+
+export function assertSafeBrandPhotograph(value: unknown) {
+  const inspection = brandPhotographInspectionSchema.parse(value);
+  if (
+    inspection.hasUnintendedText ||
+    inspection.hasVisibleWatermark ||
+    inspection.hasThirdPartyBranding
+  ) {
+    throw new Error(
+      `Generated Brand Photograph did not pass visual inspection: ${inspection.notes}`,
+    );
+  }
+  return inspection;
+}
+
+export function createPhotographPrompt(
+  brandBrief: { companyName: string; description: string },
+  direction: PhotographyDirection,
+  shot: PhotographShot,
+) {
+  return [
+    "Create one original, high quality Brand Photograph.",
+    `Brand Brief: ${JSON.stringify(brandBrief)}.`,
+    `Shared photography direction: ${direction.summary}`,
+    `Aesthetic: ${direction.aesthetic}`,
+    `Lighting: ${direction.lighting}`,
+    `Palette: ${direction.palette.join(", ")}.`,
+    `Direction rules: ${direction.rules.join(" ")}`,
+    `Role: ${shot.role}.`,
+    `Subject: ${shot.subject}`,
+    `Composition: ${shot.composition}`,
+    "Create original generated imagery, not stock photography.",
+    "No text, lettering, captions, or typography anywhere in the image.",
+    "No watermarks.",
+    "No third party logos or branding.",
+  ].join(" ");
+}
+
 export type BrandDirection = z.infer<typeof brandDirectionSchema>;
 export type LogoGeneration = z.infer<typeof logoGenerationSchema>;
 export type ColorGeneration = z.infer<typeof colorGenerationSchema>;
 export type TypographyGeneration = z.infer<typeof typographyGenerationSchema>;
 export type VoiceGeneration = z.infer<typeof voiceGenerationSchema>;
+export type PhotographRole = z.infer<typeof photographRoleSchema>;
+export type PhotographShot = z.infer<typeof photographShotSchema>;
+export type PhotographyDirection = z.infer<typeof photographyDirectionSchema>;
 
 export const progressiveRegionIds = [
   "logo",
