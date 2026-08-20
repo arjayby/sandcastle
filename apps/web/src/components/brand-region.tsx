@@ -1,7 +1,7 @@
 import { Button } from "@sandcastle/ui/components/button";
 import { Spinner } from "@sandcastle/ui/components/spinner";
 import { cn } from "@sandcastle/ui/lib/utils";
-import { FocusIcon } from "lucide-react";
+import { FocusIcon, RotateCcwIcon } from "lucide-react";
 import type { CSSProperties, MouseEvent } from "react";
 
 import type { BrandRegion } from "@/lib/brand-system";
@@ -423,10 +423,12 @@ export default function BrandRegionCard({
   region,
   isSelected,
   onSelect,
+  onRetry,
 }: {
   region: BrandRegion;
   isSelected: boolean;
   onSelect: (event: MouseEvent<HTMLElement>) => void;
+  onRetry: () => void;
 }) {
   const style: CSSProperties = {
     left: region.frame.x,
@@ -456,6 +458,16 @@ export default function BrandRegionCard({
       >
         <FocusIcon />
       </Button>
+      {region.state === "failed" ? (
+        <Button
+          size="sm"
+          className="absolute right-3 bottom-3 z-10"
+          onClick={onRetry}
+        >
+          <RotateCcwIcon data-icon="inline-start" />
+          Retry {region.name}
+        </Button>
+      ) : null}
       <BrandRegionContent region={region} />
     </section>
   );

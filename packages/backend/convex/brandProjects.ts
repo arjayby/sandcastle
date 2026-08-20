@@ -9,9 +9,24 @@ import { type MutationCtx, mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
 import { photographRoles } from "./brandGenerationContract";
 import {
+  brandRegionIdValidator,
   generationStageValidator,
+  operationKindValidator,
   photographRoleValidator,
 } from "./brandGenerationValidators";
+import { claimBrandProjectOperation } from "./brandOperationContract";
+
+const appliedGenerationStages = new Set([
+  "motion",
+  "interface-foundation",
+  "design-tokens",
+]);
+
+function generationActionForStage(stage: string | undefined) {
+  return stage && appliedGenerationStages.has(stage)
+    ? internal.brandGeneration.generateAppliedRegions
+    : internal.brandGeneration.generate;
+}
 
 const brandProjectFields = {
   _id: v.id("brandProjects"),
@@ -24,6 +39,10 @@ const brandProjectFields = {
   updatedAt: v.number(),
   generationStage: v.optional(generationStageValidator),
   generationError: v.optional(v.string()),
+  activeOperationId: v.optional(v.string()),
+  activeOperationKind: v.optional(operationKindValidator),
+  generationRecoveryCount: v.optional(v.number()),
+  builtInFallback: v.optional(v.boolean()),
   directionJson: v.optional(v.string()),
   logoJson: v.optional(v.string()),
   colorJson: v.optional(v.string()),
@@ -128,6 +147,11 @@ export const create = mutation({
       return existingProject._id;
     }
 
+    const operation = claimBrandProjectOperation(
+      null,
+      "generation",
+      crypto.randomUUID(),
+    );
     const projectId = await ctx.db.insert("brandProjects", {
       ownerId,
       draftId: args.draftId,
@@ -135,11 +159,15 @@ export const create = mutation({
       ...brandBrief,
       updatedAt: Date.now(),
       generationStage: "direction",
+      activeOperationId: operation.id,
+      activeOperationKind: operation.kind,
+      generationRecoveryCount: 0,
     });
 
     await ctx.scheduler.runAfter(0, internal.brandGeneration.generate, {
       projectId,
       ownerId,
+      operationId: operation.id,
     });
 
     return projectId;
@@ -253,6 +281,9 @@ export const duplicate = mutation({
   handler: async (ctx, { projectId }) => {
     const ownerId = await getOwnerId(ctx);
     const project = await getOwnedBrandProject(ctx, ownerId, projectId);
+    const copiedOperation = project.activeOperationId
+      ? claimBrandProjectOperation(null, "generation", crypto.randomUUID())
+      : null;
 
     const copiedProjectId = await ctx.db.insert("brandProjects", {
       ...getCopyableBrandProjectData(project),
@@ -260,6 +291,8 @@ export const duplicate = mutation({
       draftId: crypto.randomUUID(),
       name: `${project.name ?? project.companyName} copy`,
       updatedAt: Date.now(),
+      activeOperationId: copiedOperation?.id,
+      activeOperationKind: copiedOperation?.kind,
     });
     const photographs = await ctx.db
       .query("brandPhotographs")
@@ -273,7 +306,7 @@ export const duplicate = mutation({
             ...photograph,
             projectId: copiedProjectId,
           });
-          if (photograph.state === "generating") {
+          if (photograph.state === "generating" && copiedOperation) {
             await ctx.scheduler.runAfter(
               0,
               internal.brandGeneration.generatePhotograph,
@@ -281,14 +314,147 @@ export const duplicate = mutation({
                 projectId: copiedProjectId,
                 ownerId,
                 role: photograph.role,
+                operationId: copiedOperation.id,
               },
             );
           }
         },
       ),
     );
+    if (copiedOperation && project.generationStage !== "photography") {
+      await ctx.scheduler.runAfter(
+        0,
+        generationActionForStage(project.generationStage),
+        {
+          projectId: copiedProjectId,
+          ownerId,
+          operationId: copiedOperation.id,
+        },
+      );
+    }
 
     return copiedProjectId;
+  },
+});
+
+export const retryRegion = mutation({
+  args: {
+    projectId: v.id("brandProjects"),
+    region: brandRegionIdValidator,
+  },
+  returns: v.null(),
+  handler: async (ctx, { projectId, region }) => {
+    const ownerId = await getOwnerId(ctx);
+    const project = await getOwnedBrandProject(ctx, ownerId, projectId);
+    const activeOperation = project.activeOperationId
+      ? {
+          id: project.activeOperationId,
+          kind: project.activeOperationKind ?? ("generation" as const),
+        }
+      : null;
+    if (!project.generationError || project.builtInFallback) {
+      throw new ConvexError("This Brand Region is not waiting for recovery");
+    }
+
+    const stagesForRegion = {
+      logo: ["logo"],
+      color: ["color"],
+      typography: ["typography"],
+      "voice-and-tone": ["voice-and-tone"],
+      photography: ["photography-direction", "photography"],
+      motion: ["motion"],
+      "interface-foundation": ["interface-foundation"],
+      "design-tokens": ["design-tokens"],
+    } as const;
+    if (
+      !project.generationStage ||
+      !(stagesForRegion[region] as readonly string[]).includes(
+        project.generationStage,
+      )
+    ) {
+      throw new ConvexError("Only the failed Brand Region can be retried");
+    }
+
+    const operation = claimBrandProjectOperation(
+      activeOperation,
+      "generation",
+      crypto.randomUUID(),
+    );
+    await ctx.db.patch(projectId, {
+      activeOperationId: operation.id,
+      activeOperationKind: operation.kind,
+      generationError: undefined,
+      generationRecoveryCount: (project.generationRecoveryCount ?? 0) + 1,
+      updatedAt: Date.now(),
+    });
+
+    if (project.generationStage === "photography") {
+      const photographs = await ctx.db
+        .query("brandPhotographs")
+        .withIndex("by_project_and_role", (q) => q.eq("projectId", projectId))
+        .take(photographRoles.length);
+      const failedPhotographs = photographs.filter(
+        (photograph) => photograph.state === "failed",
+      );
+      if (failedPhotographs.length === 0) {
+        throw new ConvexError("No failed Brand Photograph is available");
+      }
+      for (const photograph of failedPhotographs) {
+        await ctx.db.patch(photograph._id, {
+          state: "generating",
+          error: undefined,
+        });
+        await ctx.scheduler.runAfter(
+          0,
+          internal.brandGeneration.generatePhotograph,
+          {
+            projectId,
+            ownerId,
+            role: photograph.role,
+            operationId: operation.id,
+          },
+        );
+      }
+      return null;
+    }
+
+    await ctx.scheduler.runAfter(
+      0,
+      generationActionForStage(project.generationStage),
+      {
+        projectId,
+        ownerId,
+        operationId: operation.id,
+      },
+    );
+    return null;
+  },
+});
+
+export const loadBuiltInFallback = mutation({
+  args: { projectId: v.id("brandProjects") },
+  returns: v.null(),
+  handler: async (ctx, { projectId }) => {
+    const ownerId = await getOwnerId(ctx);
+    const project = await getOwnedBrandProject(ctx, ownerId, projectId);
+    if (project.activeOperationId) {
+      throw new ConvexError(
+        "Another generation or revision operation is already active",
+      );
+    }
+    if (project.logoJson || !project.generationError) {
+      throw new ConvexError(
+        "The built in fallback is available after complete provider failure",
+      );
+    }
+
+    await ctx.db.patch(projectId, {
+      builtInFallback: true,
+      generationStage: "ready",
+      generationError: undefined,
+      updatedAt: Date.now(),
+    });
+    return null;
   },
 });
 

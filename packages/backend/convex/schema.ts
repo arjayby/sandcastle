@@ -3,6 +3,7 @@ import { v } from "convex/values";
 
 import {
   generationStageValidator,
+  operationKindValidator,
   photographRoleValidator,
 } from "./brandGenerationValidators";
 
@@ -16,6 +17,10 @@ export default defineSchema({
     updatedAt: v.number(),
     generationStage: v.optional(generationStageValidator),
     generationError: v.optional(v.string()),
+    activeOperationId: v.optional(v.string()),
+    activeOperationKind: v.optional(operationKindValidator),
+    generationRecoveryCount: v.optional(v.number()),
+    builtInFallback: v.optional(v.boolean()),
     directionJson: v.optional(v.string()),
     logoJson: v.optional(v.string()),
     colorJson: v.optional(v.string()),

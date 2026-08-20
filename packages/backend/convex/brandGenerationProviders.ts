@@ -37,6 +37,8 @@ export type GenerationContext = {
   ownerId: string;
   companyName: string;
   description: string;
+  providerAttempt?: number;
+  recoveryCount?: number;
 };
 
 export type DirectedGenerationContext = GenerationContext & {
@@ -162,6 +164,13 @@ const controlledProvider: BrandGenerationProvider = {
   },
   async createLogo(_ctx, context) {
     await controlledPause();
+    if (
+      context.description.includes("[controlled-failure:logo-once]") &&
+      context.providerAttempt === 1 &&
+      (context.recoveryCount ?? 0) === 0
+    ) {
+      throw new Error("Controlled transient logo provider failure");
+    }
     return logoGenerationSchema.parse({
       summary: "A single directional signal with a confident wordmark.",
       rules: [
@@ -177,8 +186,16 @@ const controlledProvider: BrandGenerationProvider = {
       symbolSvg: controlledSymbolSvg,
     });
   },
-  async createColor() {
+  async createColor(_ctx, context) {
     await controlledPause();
+    if (
+      context.description.includes(
+        "[controlled-failure:color-until-manual-retry]",
+      ) &&
+      (context.recoveryCount ?? 0) === 0
+    ) {
+      throw new Error("Controlled color provider failure");
+    }
     return colorGenerationSchema.parse({
       summary: "Deep navigation ink with bright, purposeful signals.",
       rules: [
@@ -509,28 +526,20 @@ const controlledImageProvider: BrandImageProvider = {
 
 const liveImageProvider: BrandImageProvider = {
   async createPhotograph(context, direction, shot) {
-    let lastError: unknown = new Error("Brand Photograph generation failed");
-    for (let attempt = 0; attempt < 2; attempt += 1) {
-      try {
-        const { image } = await generateImage({
-          model: google.image("imagen-4.0-generate-001"),
-          prompt: createPhotographPrompt(
-            {
-              companyName: context.companyName,
-              description: context.description,
-            },
-            direction,
-            shot,
-          ),
-          aspectRatio: shot.role === "hero" ? "16:9" : "4:3",
-        });
-        await inspectBrandPhotograph(image.uint8Array, image.mediaType);
-        return { data: image.uint8Array, mediaType: image.mediaType };
-      } catch (error) {
-        lastError = error;
-      }
-    }
-    throw lastError;
+    const { image } = await generateImage({
+      model: google.image("imagen-4.0-generate-001"),
+      prompt: createPhotographPrompt(
+        {
+          companyName: context.companyName,
+          description: context.description,
+        },
+        direction,
+        shot,
+      ),
+      aspectRatio: shot.role === "hero" ? "16:9" : "4:3",
+    });
+    await inspectBrandPhotograph(image.uint8Array, image.mediaType);
+    return { data: image.uint8Array, mediaType: image.mediaType };
   },
 };
 

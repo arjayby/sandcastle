@@ -540,3 +540,55 @@ test("a Brand Builder can manage multiple Brand Projects", async ({ page }) => {
     page.getByRole("link", { name: "Independent copy" }),
   ).toBeVisible();
 });
+
+test("Progressive Generation recovers one failed Brand Region without losing completed work", async ({
+  page,
+}) => {
+  const runId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const email = `recovery-${runId}@example.com`;
+  const password = "sandcastle-test-password";
+  const companyName = `Recovery ${runId}`;
+  const description = [
+    "A planning tool for independent product teams.",
+    "[controlled-failure:logo-once]",
+    "[controlled-failure:color-until-manual-retry]",
+  ].join(" ");
+
+  await page.goto("/");
+  await page.getByLabel("Company name").fill(companyName);
+  await page.getByLabel("Description").fill(description);
+  await page.getByRole("button", { name: "Generate" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Create your account" }),
+  ).toBeVisible();
+  await page.getByLabel("Name").fill("Recovery Owner");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(password);
+  await page.getByRole("button", { name: "Sign Up" }).click();
+
+  await expect(page).toHaveURL(/\/projects\/(?!new$)[a-z0-9]+$/);
+  await page.reload();
+
+  const logo = page.getByRole("region", { name: "Logo Brand Region" });
+  const color = page.getByRole("region", { name: "Color Brand Region" });
+  await expect(color.getByText("Failed", { exact: true })).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(logo.getByText("Ready", { exact: true })).toBeVisible();
+  await expect(logo.getByText("Plan with a clearer signal.")).toBeVisible();
+
+  await color.getByRole("button", { name: "Retry Color" }).click();
+  await expect(color.getByText("Generating", { exact: true })).toBeVisible();
+  await page.reload();
+
+  await expect(color.getByText("Ready", { exact: true })).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(logo.getByText("Ready", { exact: true })).toBeVisible();
+  await expect(logo.getByText("Plan with a clearer signal.")).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "Design Tokens Brand Region" })
+      .getByText("Ready for production"),
+  ).toBeVisible({ timeout: 30_000 });
+});

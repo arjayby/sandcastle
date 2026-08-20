@@ -507,6 +507,7 @@ export type ProgressiveGenerationData = {
     | "ready"
     | "failed";
   generationError?: string;
+  builtInFallback?: boolean;
   directionJson?: string;
   logoJson?: string;
   colorJson?: string;
@@ -565,6 +566,10 @@ export function createProgressiveBrandSystem(
   projectName: string,
   generation: ProgressiveGenerationData,
 ) {
+  if (generation.builtInFallback) {
+    return createFallbackBrandSystem(projectName);
+  }
+
   if (!(generation.generationStage || generation.directionJson)) {
     return createFallbackBrandSystem(projectName);
   }

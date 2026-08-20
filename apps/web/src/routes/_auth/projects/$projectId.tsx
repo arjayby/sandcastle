@@ -8,7 +8,7 @@ import {
 } from "@sandcastle/ui/components/empty";
 import { Skeleton } from "@sandcastle/ui/components/skeleton";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 
 import BrandCanvas from "@/components/brand-canvas";
 import BrandSystemCanvas from "@/components/brand-system-canvas";
@@ -20,8 +20,13 @@ export const Route = createFileRoute("/_auth/projects/$projectId")({
 
 function BrandProjectPage() {
   const { projectId } = Route.useParams();
+  const brandProjectId = projectId as Id<"brandProjects">;
+  const retryRegion = useMutation(api.brandProjects.retryRegion);
+  const loadBuiltInFallback = useMutation(
+    api.brandProjects.loadBuiltInFallback,
+  );
   const project = useQuery(api.brandProjects.get, {
-    projectId: projectId as Id<"brandProjects">,
+    projectId: brandProjectId,
   });
 
   if (project === undefined) {
@@ -57,6 +62,7 @@ function BrandProjectPage() {
       generation={{
         generationStage: project.generationStage,
         generationError: project.generationError,
+        builtInFallback: project.builtInFallback,
         directionJson: project.directionJson,
         logoJson: project.logoJson,
         colorJson: project.colorJson,
@@ -68,6 +74,12 @@ function BrandProjectPage() {
         interfaceJson: project.interfaceJson,
         designTokensJson: project.designTokensJson,
       }}
+      onRetryRegion={(region) =>
+        retryRegion({ projectId: brandProjectId, region })
+      }
+      onLoadBuiltInFallback={() =>
+        loadBuiltInFallback({ projectId: brandProjectId })
+      }
       onSignOut={() => authClient.signOut()}
     />
   );

@@ -14,12 +14,14 @@ import type * as brandGeneration from "../brandGeneration.js";
 import type * as brandGenerationContract from "../brandGenerationContract.js";
 import type * as brandGenerationProviders from "../brandGenerationProviders.js";
 import type * as brandGenerationValidators from "../brandGenerationValidators.js";
+import type * as brandOperationContract from "../brandOperationContract.js";
 import type * as brandProjects from "../brandProjects.js";
 import type * as chat from "../chat.js";
 import type * as healthCheck from "../healthCheck.js";
 import type * as http from "../http.js";
 import type * as polar from "../polar.js";
 import type * as privateData from "../privateData.js";
+import type * as providerResponseContract from "../providerResponseContract.js";
 
 import type {
   ApiFromModules,
@@ -34,12 +36,14 @@ declare const fullApi: ApiFromModules<{
   brandGenerationContract: typeof brandGenerationContract;
   brandGenerationProviders: typeof brandGenerationProviders;
   brandGenerationValidators: typeof brandGenerationValidators;
+  brandOperationContract: typeof brandOperationContract;
   brandProjects: typeof brandProjects;
   chat: typeof chat;
   healthCheck: typeof healthCheck;
   http: typeof http;
   polar: typeof polar;
   privateData: typeof privateData;
+  providerResponseContract: typeof providerResponseContract;
 }>;
 
 /**
