@@ -61,7 +61,11 @@ function BrandProjectPage() {
 		<BrandCanvas>
 			<div className="m-auto flex w-full max-w-4xl flex-col gap-4">
 				<div className="flex items-center justify-between gap-4">
-					<Button variant="outline" render={<Link to="/dashboard" />}>
+					<Button
+						variant="outline"
+						nativeButton={false}
+						render={<Link to="/dashboard" />}
+					>
 						All Brand Projects
 					</Button>
 					<Button variant="ghost" onClick={() => authClient.signOut()}>

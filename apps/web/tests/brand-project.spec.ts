@@ -71,12 +71,12 @@ test("a Brand Builder can create, authenticate, reopen, and persist an owned Bra
 	await expect(page.getByText(description)).toBeVisible();
 
 	await page.getByRole("button", { name: "Sign out" }).click();
+	await page.getByRole("button", { name: "Need an account? Sign up" }).click();
 	await page.getByLabel("Name").fill("Other Owner");
 	await page.getByLabel("Email").fill(otherOwnerEmail);
 	await page.getByLabel("Password").fill(password);
 	await page.getByRole("button", { name: "Sign Up" }).click();
 
-	await page.goto(projectUrl);
 	await expect(
 		page.getByRole("heading", { name: "Brand Project not found" }),
 	).toBeVisible();

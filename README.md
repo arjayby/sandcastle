@@ -32,7 +32,13 @@ pnpm run dev:setup
 
 Follow the prompts to create a new Convex project and connect it to your application.
 
-Copy environment variables from `packages/backend/.env.local` to `apps/*/.env`.
+Create `apps/web/.env` from `apps/web/.env.example`, then copy the values from
+`packages/backend/.env.local` using this mapping:
+
+```text
+CONVEX_URL -> VITE_CONVEX_URL
+CONVEX_SITE_URL -> VITE_CONVEX_SITE_URL
+```
 
 Then, run the development server:
 

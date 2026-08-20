@@ -55,7 +55,9 @@ function DashboardContent() {
 							</EmptyDescription>
 						</EmptyHeader>
 						<EmptyContent>
-							<Button render={<Link to="/" />}>Create a Brand Project</Button>
+							<Button nativeButton={false} render={<Link to="/" />}>
+								Create a Brand Project
+							</Button>
 						</EmptyContent>
 					</Empty>
 				) : (

@@ -3,6 +3,16 @@ import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
 
+const brandProjectValidator = v.object({
+	_id: v.id("brandProjects"),
+	_creationTime: v.number(),
+	ownerId: v.string(),
+	draftId: v.string(),
+	companyName: v.string(),
+	description: v.string(),
+	updatedAt: v.number(),
+});
+
 async function getOwnerId(
 	ctx: Parameters<typeof authComponent.getAuthUser>[0],
 ) {
@@ -29,6 +39,7 @@ export const create = mutation({
 		companyName: v.string(),
 		description: v.string(),
 	},
+	returns: v.id("brandProjects"),
 	handler: async (ctx, args) => {
 		const ownerId = await getOwnerId(ctx);
 		const brandBrief = normalizeBrandBrief(args.companyName, args.description);
@@ -55,18 +66,20 @@ export const create = mutation({
 
 export const list = query({
 	args: {},
+	returns: v.array(brandProjectValidator),
 	handler: async (ctx) => {
 		const ownerId = await getOwnerId(ctx);
 		return await ctx.db
 			.query("brandProjects")
 			.withIndex("by_owner", (q) => q.eq("ownerId", ownerId))
 			.order("desc")
-			.collect();
+			.take(100);
 	},
 });
 
 export const get = query({
 	args: { projectId: v.id("brandProjects") },
+	returns: v.union(brandProjectValidator, v.null()),
 	handler: async (ctx, { projectId }) => {
 		const ownerId = await getOwnerId(ctx);
 		const project = await ctx.db.get(projectId);
@@ -80,6 +93,7 @@ export const updateBrief = mutation({
 		companyName: v.string(),
 		description: v.string(),
 	},
+	returns: v.null(),
 	handler: async (ctx, { projectId, companyName, description }) => {
 		const ownerId = await getOwnerId(ctx);
 		const project = await ctx.db.get(projectId);
@@ -94,5 +108,7 @@ export const updateBrief = mutation({
 			...brandBrief,
 			updatedAt: Date.now(),
 		});
+
+		return null;
 	},
 });
