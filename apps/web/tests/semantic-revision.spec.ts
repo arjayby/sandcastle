@@ -60,7 +60,9 @@ test("a Brand Builder can apply regional and complete Semantic Revisions coheren
   ).toBeVisible();
   await regionInspector
     .getByLabel("Revision request for Color")
-    .fill("Shift the primary color toward a confident ocean blue.");
+    .fill(
+      "Shift the primary color toward a confident ocean blue, but do not replace the existing photographs.",
+    );
   await regionInspector
     .getByRole("button", { name: "Apply Color revision" })
     .click();
@@ -107,16 +109,25 @@ test("a Brand Builder can apply regional and complete Semantic Revisions coheren
     .getByRole("button", { name: "Apply complete Brand System revision" })
     .click();
 
-  await expect(
-    page
-      .getByRole("region", { name: "Logo Brand Region" })
-      .getByText("Revising", { exact: true }),
-  ).toBeVisible();
-  await expect(
-    page
-      .getByRole("region", { name: "Voice and Tone Brand Region" })
-      .getByText("Revising", { exact: true }),
-  ).toBeVisible();
+  const completeSystemRegions = [
+    "Logo",
+    "Color",
+    "Typography",
+    "Voice and Tone",
+    "Photography",
+    "Motion",
+    "Interface Foundation",
+    "Design Tokens",
+  ];
+  await Promise.all(
+    completeSystemRegions.map((regionName) =>
+      expect(
+        page
+          .getByRole("region", { name: `${regionName} Brand Region` })
+          .getByText("Revising", { exact: true }),
+      ).toBeVisible(),
+    ),
+  );
   await expect(
     page.getByText("Build a bolder shared signal.", { exact: true }),
   ).toBeVisible({ timeout: 30_000 });
@@ -125,4 +136,11 @@ test("a Brand Builder can apply regional and complete Semantic Revisions coheren
       .getByRole("region", { name: "Typography Brand Region" })
       .getByText("Make the next move unmistakable.", { exact: true }),
   ).toBeVisible();
+  expect(
+    await photography
+      .getByRole("img")
+      .evaluateAll((images) =>
+        images.map((image) => image.getAttribute("src")),
+      ),
+  ).toEqual(photographUrlsBefore);
 });
