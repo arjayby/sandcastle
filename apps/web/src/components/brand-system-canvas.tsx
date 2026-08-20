@@ -6,6 +6,7 @@ import {
   FocusIcon,
   LogOutIcon,
   MinusIcon,
+  PackageOpenIcon,
   ScanIcon,
   XIcon,
   ZoomInIcon,
@@ -141,11 +142,15 @@ export default function BrandSystemCanvas({
   projectName,
   description,
   generation,
+  onRetryRegion,
+  onLoadBuiltInFallback,
   onSignOut,
 }: {
   projectName: string;
   description: string;
   generation: ProgressiveGenerationData;
+  onRetryRegion: (region: BrandRegion["id"]) => Promise<unknown>;
+  onLoadBuiltInFallback: () => Promise<unknown>;
   onSignOut: () => void;
 }) {
   const brandSystem = useMemo(
@@ -153,6 +158,10 @@ export default function BrandSystemCanvas({
     [generation, projectName],
   );
   const directionName = getValidatedDirectionName(generation.directionJson);
+  const completeProviderFailure =
+    generation.generationStage === "direction" &&
+    !!generation.generationError &&
+    !generation.builtInFallback;
   const viewportRef = useRef<HTMLDivElement>(null);
   const inspectorRef = useRef<HTMLElement>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -406,6 +415,12 @@ export default function BrandSystemCanvas({
             {directionName ? `${directionName} · ${description}` : description}
           </p>
         </div>
+        {completeProviderFailure ? (
+          <Button size="sm" onClick={() => void onLoadBuiltInFallback()}>
+            <PackageOpenIcon data-icon="inline-start" />
+            Use built in fallback
+          </Button>
+        ) : null}
         <div className="flex items-center gap-1 rounded-md border bg-background p-1">
           <Button
             variant="ghost"
@@ -533,6 +548,7 @@ export default function BrandSystemCanvas({
               region={region}
               isSelected={region.id === selectedRegionId}
               onSelect={(event) => selectRegion(region, event)}
+              onRetry={() => void onRetryRegion(region.id)}
             />
           ))}
         </section>

@@ -82,3 +82,48 @@ describe("progressive Brand Photographs", () => {
     ]);
   });
 });
+
+describe("Progressive Generation recovery", () => {
+  test("keeps a ready Brand Region unchanged when the next region fails", () => {
+    const logoJson = JSON.stringify({
+      summary: "A clear directional mark.",
+      rules: ["Keep clear space around the mark."],
+      wordmark: "NORTHSTAR",
+      monogram: "N",
+      tagline: "Plan with a clearer signal.",
+      primaryLockupSvg:
+        '<svg viewBox="0 0 20 20"><title>Primary</title><path d="M0 0h20v20H0z"/></svg>',
+      wordmarkSvg:
+        '<svg viewBox="0 0 20 20"><title>Wordmark</title><path d="M0 4h20v4H0z"/></svg>',
+      symbolSvg:
+        '<svg viewBox="0 0 20 20"><title>Symbol</title><circle cx="10" cy="10" r="8"/></svg>',
+    });
+
+    const system = createProgressiveBrandSystem("Northstar", {
+      generationStage: "color",
+      generationError: "Provider offline",
+      logoJson,
+    });
+
+    expect(system.regions[0]).toMatchObject({
+      id: "logo",
+      state: "ready",
+      summary: "A clear directional mark.",
+    });
+    expect(system.regions[1]).toMatchObject({ id: "color", state: "failed" });
+  });
+
+  test("loads the polished built in fallback through the Brand System contract", () => {
+    const system = createProgressiveBrandSystem("Northstar", {
+      generationStage: "direction",
+      generationError: "Provider offline",
+      builtInFallback: true,
+    });
+
+    expect(system.contractVersion).toBe(1);
+    expect(system.name).toBe("Northstar");
+    expect(system.regions.every((region) => region.state === "ready")).toBe(
+      true,
+    );
+  });
+});

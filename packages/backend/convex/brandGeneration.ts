@@ -1,4 +1,5 @@
 import { ConvexError, v } from "convex/values";
+import { z } from "zod";
 
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
@@ -29,6 +30,9 @@ import {
   generationStageValidator,
   photographRoleValidator,
 } from "./brandGenerationValidators";
+import { runProviderRequest } from "./providerResponseContract";
+
+const PROVIDER_TIMEOUT_MS = 120_000;
 
 const regionValidator = v.union(
   v.literal("logo"),
@@ -45,6 +49,9 @@ const generationContextValidator = v.object({
   ownerId: v.string(),
   companyName: v.string(),
   description: v.string(),
+  generationStage: generationStageValidator,
+  recoveryCount: v.number(),
+  directionJson: v.optional(v.string()),
 });
 
 const photographGenerationContextValidator = v.object({
@@ -54,6 +61,7 @@ const photographGenerationContextValidator = v.object({
   description: v.string(),
   directionJson: v.string(),
   photographyDirectionJson: v.string(),
+  recoveryCount: v.number(),
 });
 
 const appliedGenerationContextValidator = v.object({
@@ -65,7 +73,34 @@ const appliedGenerationContextValidator = v.object({
   colorJson: v.string(),
   typographyJson: v.string(),
   voiceJson: v.string(),
+  motionJson: v.optional(v.string()),
+  generationStage: generationStageValidator,
+  recoveryCount: v.number(),
 });
+
+const imageProviderResponseSchema = z
+  .object({
+    data: z.instanceof(Uint8Array),
+    mediaType: z.string().startsWith("image/"),
+  })
+  .refine(
+    (image) => image.data.byteLength > 0 && image.data.byteLength <= 20_000_000,
+    "Image provider returned an invalid photograph",
+  );
+
+async function requireProviderResult<Schema extends z.ZodType>(options: {
+  request: (attempt: number) => Promise<unknown>;
+  schema: Schema;
+}) {
+  const result = await runProviderRequest({
+    ...options,
+    timeoutMs: PROVIDER_TIMEOUT_MS,
+  });
+  if (!result.ok) {
+    throw new Error(result.error);
+  }
+  return result.value;
+}
 
 function schemaForRegion(region: ProgressiveRegionId) {
   switch (region) {
@@ -87,11 +122,21 @@ function schemaForRegion(region: ProgressiveRegionId) {
 }
 
 export const getGenerationContext = internalQuery({
-  args: { projectId: v.id("brandProjects"), ownerId: v.string() },
+  args: {
+    projectId: v.id("brandProjects"),
+    ownerId: v.string(),
+    operationId: v.string(),
+  },
   returns: v.union(generationContextValidator, v.null()),
-  handler: async (ctx, { projectId, ownerId }) => {
+  handler: async (ctx, { projectId, ownerId, operationId }) => {
     const project = await ctx.db.get(projectId);
-    if (!project || project.ownerId !== ownerId) {
+    if (
+      !project ||
+      project.ownerId !== ownerId ||
+      project.activeOperationId !== operationId ||
+      project.activeOperationKind !== "generation" ||
+      !project.generationStage
+    ) {
       return null;
     }
     return {
@@ -99,18 +144,30 @@ export const getGenerationContext = internalQuery({
       ownerId,
       companyName: project.companyName,
       description: project.description,
+      generationStage: project.generationStage,
+      recoveryCount: project.generationRecoveryCount ?? 0,
+      directionJson: project.directionJson,
     };
   },
 });
 
 export const saveDirection = internalMutation({
-  args: { projectId: v.id("brandProjects"), directionJson: v.string() },
+  args: {
+    projectId: v.id("brandProjects"),
+    operationId: v.string(),
+    directionJson: v.string(),
+  },
   returns: v.null(),
-  handler: async (ctx, { projectId, directionJson }) => {
+  handler: async (ctx, { projectId, operationId, directionJson }) => {
     brandDirectionSchema.parse(JSON.parse(directionJson));
+    const project = await ctx.db.get(projectId);
+    if (project?.activeOperationId !== operationId) {
+      throw new ConvexError("Brand generation operation is no longer active");
+    }
     await ctx.db.patch(projectId, {
       directionJson,
       generationStage: "logo",
+      generationError: undefined,
       updatedAt: Date.now(),
     });
     return null;
@@ -120,13 +177,21 @@ export const saveDirection = internalMutation({
 export const saveRegion = internalMutation({
   args: {
     projectId: v.id("brandProjects"),
+    operationId: v.string(),
     region: regionValidator,
     resultJson: v.string(),
     nextStage: generationStageValidator,
   },
   returns: v.null(),
-  handler: async (ctx, { projectId, region, resultJson, nextStage }) => {
+  handler: async (
+    ctx,
+    { projectId, operationId, region, resultJson, nextStage },
+  ) => {
     schemaForRegion(region).parse(JSON.parse(resultJson));
+    const project = await ctx.db.get(projectId);
+    if (project?.activeOperationId !== operationId) {
+      throw new ConvexError("Brand generation operation is no longer active");
+    }
     const field = `${
       region === "voice-and-tone"
         ? "voice"
@@ -146,6 +211,13 @@ export const saveRegion = internalMutation({
     await ctx.db.patch(projectId, {
       [field]: resultJson,
       generationStage: nextStage,
+      generationError: undefined,
+      ...(nextStage === "ready"
+        ? {
+            activeOperationId: undefined,
+            activeOperationKind: undefined,
+          }
+        : {}),
       updatedAt: Date.now(),
     });
     return null;
@@ -156,15 +228,20 @@ export const startPhotography = internalMutation({
   args: {
     projectId: v.id("brandProjects"),
     ownerId: v.string(),
+    operationId: v.string(),
     directionJson: v.string(),
   },
   returns: v.null(),
-  handler: async (ctx, { projectId, ownerId, directionJson }) => {
+  handler: async (ctx, { projectId, ownerId, operationId, directionJson }) => {
     const direction = photographyDirectionSchema.parse(
       JSON.parse(directionJson),
     );
     const project = await ctx.db.get(projectId);
-    if (!project || project.ownerId !== ownerId) {
+    if (
+      !project ||
+      project.ownerId !== ownerId ||
+      project.activeOperationId !== operationId
+    ) {
       throw new ConvexError("Brand Project not found");
     }
 
@@ -185,7 +262,7 @@ export const startPhotography = internalMutation({
         await ctx.scheduler.runAfter(
           0,
           internal.brandGeneration.generatePhotograph,
-          { projectId, ownerId, role: shot.role },
+          { projectId, ownerId, role: shot.role, operationId },
         );
       }
     }
@@ -204,9 +281,10 @@ export const getPhotographGenerationContext = internalQuery({
     projectId: v.id("brandProjects"),
     ownerId: v.string(),
     role: photographRoleValidator,
+    operationId: v.string(),
   },
   returns: v.union(photographGenerationContextValidator, v.null()),
-  handler: async (ctx, { projectId, ownerId, role }) => {
+  handler: async (ctx, { projectId, ownerId, role, operationId }) => {
     const project = await ctx.db.get(projectId);
     const record = await ctx.db
       .query("brandPhotographs")
@@ -217,6 +295,7 @@ export const getPhotographGenerationContext = internalQuery({
     if (
       !project ||
       project.ownerId !== ownerId ||
+      project.activeOperationId !== operationId ||
       !project.directionJson ||
       !project.photographyDirectionJson ||
       !record ||
@@ -231,18 +310,24 @@ export const getPhotographGenerationContext = internalQuery({
       description: project.description,
       directionJson: project.directionJson,
       photographyDirectionJson: project.photographyDirectionJson,
+      recoveryCount: project.generationRecoveryCount ?? 0,
     };
   },
 });
 
 export const getAppliedGenerationContext = internalQuery({
-  args: { projectId: v.id("brandProjects"), ownerId: v.string() },
+  args: {
+    projectId: v.id("brandProjects"),
+    ownerId: v.string(),
+    operationId: v.string(),
+  },
   returns: v.union(appliedGenerationContextValidator, v.null()),
-  handler: async (ctx, { projectId, ownerId }) => {
+  handler: async (ctx, { projectId, ownerId, operationId }) => {
     const project = await ctx.db.get(projectId);
     if (
       !project ||
       project.ownerId !== ownerId ||
+      project.activeOperationId !== operationId ||
       !project.directionJson ||
       !project.colorJson ||
       !project.typographyJson ||
@@ -259,6 +344,9 @@ export const getAppliedGenerationContext = internalQuery({
       colorJson: project.colorJson,
       typographyJson: project.typographyJson,
       voiceJson: project.voiceJson,
+      motionJson: project.motionJson,
+      generationStage: project.generationStage ?? "motion",
+      recoveryCount: project.generationRecoveryCount ?? 0,
     };
   },
 });
@@ -266,6 +354,7 @@ export const getAppliedGenerationContext = internalQuery({
 async function finishPhotographyIfComplete(
   ctx: MutationCtx,
   projectId: Id<"brandProjects">,
+  operationId: string,
 ) {
   const photographs = await ctx.db
     .query("brandPhotographs")
@@ -276,7 +365,23 @@ async function finishPhotographyIfComplete(
     photographs.every((photograph) => photograph.state !== "generating")
   ) {
     const project = await ctx.db.get(projectId);
-    if (project?.generationStage !== "photography") {
+    if (
+      project?.generationStage !== "photography" ||
+      project.activeOperationId !== operationId
+    ) {
+      return;
+    }
+    const failedPhotograph = photographs.find(
+      (photograph) => photograph.state === "failed",
+    );
+    if (failedPhotograph) {
+      await ctx.db.patch(projectId, {
+        generationError:
+          failedPhotograph.error ?? "Brand Photograph generation failed",
+        activeOperationId: undefined,
+        activeOperationKind: undefined,
+        updatedAt: Date.now(),
+      });
       return;
     }
     await ctx.db.patch(projectId, {
@@ -286,7 +391,7 @@ async function finishPhotographyIfComplete(
     await ctx.scheduler.runAfter(
       0,
       internal.brandGeneration.generateAppliedRegions,
-      { projectId, ownerId: project.ownerId },
+      { projectId, ownerId: project.ownerId, operationId },
     );
   }
 }
@@ -294,12 +399,16 @@ async function finishPhotographyIfComplete(
 export const savePhotograph = internalMutation({
   args: {
     projectId: v.id("brandProjects"),
+    operationId: v.string(),
     role: photographRoleValidator,
     storageId: v.id("_storage"),
     mediaType: v.string(),
   },
   returns: v.null(),
-  handler: async (ctx, { projectId, role, storageId, mediaType }) => {
+  handler: async (
+    ctx,
+    { projectId, operationId, role, storageId, mediaType },
+  ) => {
     const photograph = await ctx.db
       .query("brandPhotographs")
       .withIndex("by_project_and_role", (q) =>
@@ -314,7 +423,7 @@ export const savePhotograph = internalMutation({
       storageId,
       mediaType,
     });
-    await finishPhotographyIfComplete(ctx, projectId);
+    await finishPhotographyIfComplete(ctx, projectId, operationId);
     return null;
   },
 });
@@ -322,11 +431,12 @@ export const savePhotograph = internalMutation({
 export const failPhotograph = internalMutation({
   args: {
     projectId: v.id("brandProjects"),
+    operationId: v.string(),
     role: photographRoleValidator,
     error: v.string(),
   },
   returns: v.null(),
-  handler: async (ctx, { projectId, role, error }) => {
+  handler: async (ctx, { projectId, operationId, role, error }) => {
     const photograph = await ctx.db
       .query("brandPhotographs")
       .withIndex("by_project_and_role", (q) =>
@@ -335,7 +445,7 @@ export const failPhotograph = internalMutation({
       .unique();
     if (photograph) {
       await ctx.db.patch(photograph._id, { state: "failed", error });
-      await finishPhotographyIfComplete(ctx, projectId);
+      await finishPhotographyIfComplete(ctx, projectId, operationId);
     }
     return null;
   },
@@ -346,12 +456,13 @@ export const generatePhotograph = internalAction({
     projectId: v.id("brandProjects"),
     ownerId: v.string(),
     role: photographRoleValidator,
+    operationId: v.string(),
   },
   returns: v.null(),
-  handler: async (ctx, { projectId, ownerId, role }) => {
+  handler: async (ctx, { projectId, ownerId, role, operationId }) => {
     const context = await ctx.runQuery(
       internal.brandGeneration.getPhotographGenerationContext,
-      { projectId, ownerId, role },
+      { projectId, ownerId, role, operationId },
     );
     if (!context) {
       return null;
@@ -371,24 +482,28 @@ export const generatePhotograph = internalAction({
       if (!shot) {
         throw new Error(`Photography direction is missing ${role}`);
       }
-      const image = await getBrandImageProvider().createPhotograph(
-        { ...context, direction },
-        photographyDirection,
-        shot,
-      );
-      if (
-        !image.mediaType.startsWith("image/") ||
-        image.data.byteLength === 0 ||
-        image.data.byteLength > 20_000_000
-      ) {
-        throw new Error("Image provider returned an invalid photograph");
-      }
+      const provider = getBrandImageProvider();
+      const image = await requireProviderResult({
+        request: (providerAttempt) =>
+          provider.createPhotograph(
+            {
+              ...context,
+              direction,
+              providerAttempt,
+              recoveryCount: context.recoveryCount,
+            },
+            photographyDirection,
+            shot,
+          ),
+        schema: imageProviderResponseSchema,
+      });
       const storedData = Uint8Array.from(image.data);
       storageId = await ctx.storage.store(
         new Blob([storedData.buffer], { type: image.mediaType }),
       );
       await ctx.runMutation(internal.brandGeneration.savePhotograph, {
         projectId,
+        operationId,
         role,
         storageId,
         mediaType: image.mediaType,
@@ -399,6 +514,7 @@ export const generatePhotograph = internalAction({
       }
       await ctx.runMutation(internal.brandGeneration.failPhotograph, {
         projectId,
+        operationId,
         role,
         error:
           error instanceof Error
@@ -412,11 +528,21 @@ export const generatePhotograph = internalAction({
 });
 
 export const markFailed = internalMutation({
-  args: { projectId: v.id("brandProjects"), error: v.string() },
+  args: {
+    projectId: v.id("brandProjects"),
+    operationId: v.string(),
+    error: v.string(),
+  },
   returns: v.null(),
-  handler: async (ctx, { projectId, error }) => {
+  handler: async (ctx, { projectId, operationId, error }) => {
+    const project = await ctx.db.get(projectId);
+    if (project?.activeOperationId !== operationId) {
+      return null;
+    }
     await ctx.db.patch(projectId, {
       generationError: error,
+      activeOperationId: undefined,
+      activeOperationKind: undefined,
       updatedAt: Date.now(),
     });
     return null;
@@ -427,12 +553,13 @@ export const generateAppliedRegions = internalAction({
   args: {
     projectId: v.id("brandProjects"),
     ownerId: v.string(),
+    operationId: v.string(),
   },
   returns: v.null(),
-  handler: async (ctx, { projectId, ownerId }) => {
+  handler: async (ctx, { projectId, ownerId, operationId }) => {
     const context = await ctx.runQuery(
       internal.brandGeneration.getAppliedGenerationContext,
-      { projectId, ownerId },
+      { projectId, ownerId, operationId },
     );
     if (!context) {
       throw new ConvexError("Brand Project not found");
@@ -449,21 +576,38 @@ export const generateAppliedRegions = internalAction({
         direction: brandDirectionSchema.parse(
           JSON.parse(context.directionJson),
         ),
+        recoveryCount: context.recoveryCount,
       };
       const color = colorGenerationSchema.parse(JSON.parse(context.colorJson));
       const typography = typographyGenerationSchema.parse(
         JSON.parse(context.typographyJson),
       );
       const voice = voiceGenerationSchema.parse(JSON.parse(context.voiceJson));
-      const motion = motionGenerationSchema.parse(
-        await provider.createMotion(ctx, directedContext),
-      );
-      await ctx.runMutation(internal.brandGeneration.saveRegion, {
-        projectId,
-        region: "motion",
-        resultJson: JSON.stringify(motion),
-        nextStage: "interface-foundation",
-      });
+      let stage = context.generationStage;
+      let motion = context.motionJson
+        ? motionGenerationSchema.parse(JSON.parse(context.motionJson))
+        : null;
+      if (stage === "motion") {
+        motion = await requireProviderResult({
+          request: (providerAttempt) =>
+            provider.createMotion(ctx, {
+              ...directedContext,
+              providerAttempt,
+            }),
+          schema: motionGenerationSchema,
+        });
+        await ctx.runMutation(internal.brandGeneration.saveRegion, {
+          projectId,
+          operationId,
+          region: "motion",
+          resultJson: JSON.stringify(motion),
+          nextStage: "interface-foundation",
+        });
+        stage = "interface-foundation";
+      }
+      if (!motion) {
+        throw new Error("Motion Brand Region is unavailable");
+      }
 
       const appliedContext = {
         ...directedContext,
@@ -472,28 +616,46 @@ export const generateAppliedRegions = internalAction({
         voice,
         motion,
       };
-      const interfaceFoundation = interfaceGenerationSchema.parse(
-        await provider.createInterface(ctx, appliedContext),
-      );
-      await ctx.runMutation(internal.brandGeneration.saveRegion, {
-        projectId,
-        region: "interface-foundation",
-        resultJson: JSON.stringify(interfaceFoundation),
-        nextStage: "design-tokens",
-      });
+      if (stage === "interface-foundation") {
+        const interfaceFoundation = await requireProviderResult({
+          request: (providerAttempt) =>
+            provider.createInterface(ctx, {
+              ...appliedContext,
+              providerAttempt,
+            }),
+          schema: interfaceGenerationSchema,
+        });
+        await ctx.runMutation(internal.brandGeneration.saveRegion, {
+          projectId,
+          operationId,
+          region: "interface-foundation",
+          resultJson: JSON.stringify(interfaceFoundation),
+          nextStage: "design-tokens",
+        });
+        stage = "design-tokens";
+      }
 
-      const designTokens = designTokensGenerationSchema.parse(
-        await provider.createDesignTokens(ctx, appliedContext),
-      );
-      await ctx.runMutation(internal.brandGeneration.saveRegion, {
-        projectId,
-        region: "design-tokens",
-        resultJson: JSON.stringify(designTokens),
-        nextStage: "ready",
-      });
+      if (stage === "design-tokens") {
+        const designTokens = await requireProviderResult({
+          request: (providerAttempt) =>
+            provider.createDesignTokens(ctx, {
+              ...appliedContext,
+              providerAttempt,
+            }),
+          schema: designTokensGenerationSchema,
+        });
+        await ctx.runMutation(internal.brandGeneration.saveRegion, {
+          projectId,
+          operationId,
+          region: "design-tokens",
+          resultJson: JSON.stringify(designTokens),
+          nextStage: "ready",
+        });
+      }
     } catch (error) {
       await ctx.runMutation(internal.brandGeneration.markFailed, {
         projectId,
+        operationId,
         error:
           error instanceof Error ? error.message : "Brand generation failed",
       });
@@ -507,12 +669,13 @@ export const generate = internalAction({
   args: {
     projectId: v.id("brandProjects"),
     ownerId: v.string(),
+    operationId: v.string(),
   },
   returns: v.null(),
-  handler: async (ctx, { projectId, ownerId }) => {
+  handler: async (ctx, { projectId, ownerId, operationId }) => {
     const context = await ctx.runQuery(
       internal.brandGeneration.getGenerationContext,
-      { projectId, ownerId },
+      { projectId, ownerId, operationId },
     );
     if (!context) {
       throw new ConvexError("Brand Project not found");
@@ -521,55 +684,87 @@ export const generate = internalAction({
     const provider = getBrandGenerationProvider();
 
     try {
-      const direction = brandDirectionSchema.parse(
-        await provider.createDirection(ctx, context),
-      );
-      await ctx.runMutation(internal.brandGeneration.saveDirection, {
-        projectId,
-        directionJson: JSON.stringify(direction),
-      });
-
-      const directedContext = { ...context, direction };
-      const slices = [
-        ["logo", "color", () => provider.createLogo(ctx, directedContext)],
-        [
-          "color",
-          "typography",
-          () => provider.createColor(ctx, directedContext),
-        ],
-        [
-          "typography",
-          "voice-and-tone",
-          () => provider.createTypography(ctx, directedContext),
-        ],
-        [
-          "voice-and-tone",
-          "photography-direction",
-          () => provider.createVoice(ctx, directedContext),
-        ],
-      ] as const;
-
-      for (const [region, nextStage, createResult] of slices) {
-        const result = schemaForRegion(region).parse(await createResult());
-        await ctx.runMutation(internal.brandGeneration.saveRegion, {
-          projectId,
-          region,
-          resultJson: JSON.stringify(result),
-          nextStage,
+      let stage = context.generationStage;
+      let direction = context.directionJson
+        ? brandDirectionSchema.parse(JSON.parse(context.directionJson))
+        : null;
+      if (stage === "direction") {
+        direction = await requireProviderResult({
+          request: (providerAttempt) =>
+            provider.createDirection(ctx, {
+              ...context,
+              providerAttempt,
+            }),
+          schema: brandDirectionSchema,
         });
+        await ctx.runMutation(internal.brandGeneration.saveDirection, {
+          projectId,
+          operationId,
+          directionJson: JSON.stringify(direction),
+        });
+        stage = "logo";
+      }
+      if (!direction) {
+        throw new Error("Brand direction is unavailable");
       }
 
-      const photographyDirection = photographyDirectionSchema.parse(
-        await provider.createPhotographyDirection(ctx, directedContext),
-      );
+      const directedContext = {
+        projectId,
+        ownerId,
+        companyName: context.companyName,
+        description: context.description,
+        direction,
+        recoveryCount: context.recoveryCount,
+      };
+      const slices = [
+        ["logo", "color", provider.createLogo],
+        ["color", "typography", provider.createColor],
+        ["typography", "voice-and-tone", provider.createTypography],
+        ["voice-and-tone", "photography-direction", provider.createVoice],
+      ] as const;
+
+      const startIndex = slices.findIndex(([region]) => region === stage);
+      if (startIndex >= 0) {
+        for (const [region, nextStage, createResult] of slices.slice(
+          startIndex,
+        )) {
+          const result = await requireProviderResult({
+            request: (providerAttempt) =>
+              createResult(ctx, { ...directedContext, providerAttempt }),
+            schema: schemaForRegion(region),
+          });
+          await ctx.runMutation(internal.brandGeneration.saveRegion, {
+            projectId,
+            operationId,
+            region,
+            resultJson: JSON.stringify(result),
+            nextStage,
+          });
+          stage = nextStage;
+        }
+      }
+
+      if (stage !== "photography-direction") {
+        return null;
+      }
+      const photographyDirection = await requireProviderResult({
+        request: (providerAttempt) =>
+          provider.createPhotographyDirection(ctx, {
+            ...directedContext,
+            providerAttempt,
+          }),
+        schema: photographyDirectionSchema,
+      });
       await ctx.runMutation(internal.brandGeneration.startPhotography, {
         projectId,
         ownerId,
+        operationId,
         directionJson: JSON.stringify(photographyDirection),
       });
     } catch (error) {
       await ctx.runMutation(internal.brandGeneration.markFailed, {
         projectId,
+        operationId,
         error:
           error instanceof Error ? error.message : "Brand generation failed",
       });

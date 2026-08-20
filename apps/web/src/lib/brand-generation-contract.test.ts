@@ -11,10 +11,96 @@ import {
   typographyGenerationSchema,
   validateTypographyWithGoogleFonts,
 } from "@sandcastle/backend/convex/brandGenerationContract";
+import { runProviderRequest } from "@sandcastle/backend/convex/providerResponseContract";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.useRealTimers();
+});
+
+describe("Brand Agent provider response contract", () => {
+  const responseSchema = motionGenerationSchema;
+  const validResponse = {
+    summary: "Measured motion that confirms progress.",
+    rules: ["Movement arrives softly."],
+    principle: "Lift, travel, settle",
+    duration: "320ms",
+    easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+  };
+
+  test("accepts a valid provider response", async () => {
+    await expect(
+      runProviderRequest({
+        request: async () => validResponse,
+        schema: responseSchema,
+        timeoutMs: 100,
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      value: validResponse,
+      attempts: 1,
+    });
+  });
+
+  test.each([
+    ["invalid", { ...validResponse, duration: "eventually" }],
+    ["partial", { summary: validResponse.summary }],
+  ])(
+    "sends an %s provider response through the provider failure path",
+    async (_responseType, response) => {
+      await expect(
+        runProviderRequest({
+          request: async () => response,
+          schema: responseSchema,
+          timeoutMs: 100,
+        }),
+      ).resolves.toMatchObject({
+        ok: false,
+        attempts: 2,
+        error: expect.any(String),
+      });
+    },
+  );
+
+  test("times out and retries a provider that never responds", async () => {
+    await expect(
+      runProviderRequest({
+        request: () => new Promise(() => undefined),
+        schema: responseSchema,
+        timeoutMs: 5,
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      attempts: 2,
+      error: "Brand Agent provider timed out after 5ms",
+    });
+  });
+
+  test("retries a failed provider response once", async () => {
+    const request = vi.fn().mockRejectedValue(new Error("Provider offline"));
+
+    await expect(
+      runProviderRequest({ request, schema: responseSchema, timeoutMs: 100 }),
+    ).resolves.toEqual({
+      ok: false,
+      attempts: 2,
+      error: "Provider offline",
+    });
+    expect(request).toHaveBeenCalledTimes(2);
+  });
+
+  test("returns a valid response from the automatic retry", async () => {
+    const request = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("Transient provider error"))
+      .mockResolvedValue(validResponse);
+
+    await expect(
+      runProviderRequest({ request, schema: responseSchema, timeoutMs: 100 }),
+    ).resolves.toEqual({ ok: true, value: validResponse, attempts: 2 });
+    expect(request).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe("generated logo safety boundary", () => {
