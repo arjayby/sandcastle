@@ -3,6 +3,8 @@ import {
   colorGenerationSchema,
   logoGenerationContentSchema,
   logoGenerationSchema,
+  photographRoles,
+  photographyDirectionSchema,
   typographyGenerationSchema,
   voiceGenerationSchema,
 } from "@sandcastle/backend/convex/brandGenerationContract";
@@ -72,9 +74,13 @@ const photographyRegionSchema = z.object({
     photographs: z
       .array(
         z.object({
-          role: z.enum(["Hero", "Product", "People", "Texture"]),
+          role: z.enum(photographRoles),
+          state: z.enum(["unfinished", "generating", "ready", "failed"]),
           alt: z.string().min(1),
-          colors: z.tuple([hexColorSchema, hexColorSchema, hexColorSchema]),
+          url: z.url().optional(),
+          colors: z
+            .tuple([hexColorSchema, hexColorSchema, hexColorSchema])
+            .optional(),
         }),
       )
       .length(4),
@@ -346,22 +352,26 @@ export function createFallbackBrandSystem(projectName: string): BrandSystem {
           direction: "Documentary warmth, tactile detail, patient composition.",
           photographs: [
             {
-              role: "Hero",
+              role: "hero",
+              state: "ready",
               alt: "Sunlight crossing a quiet studio table",
               colors: ["#25352F", "#6F886F", "#E4BD70"],
             },
             {
-              role: "Product",
+              role: "product",
+              state: "ready",
               alt: "A crafted object in use",
               colors: ["#D0B49A", "#F1D89B", "#9C5B43"],
             },
             {
-              role: "People",
+              role: "people",
+              state: "ready",
               alt: "Two collaborators reviewing physical notes",
               colors: ["#402F2A", "#BC8066", "#E9D4AE"],
             },
             {
-              role: "Texture",
+              role: "texture",
+              state: "ready",
               alt: "Layered paper and soft botanical shadow",
               colors: ["#E7D9BD", "#A7BDA7", "#31443D"],
             },
@@ -449,6 +459,8 @@ export type ProgressiveGenerationData = {
     | "color"
     | "typography"
     | "voice-and-tone"
+    | "photography-direction"
+    | "photography"
     | "ready"
     | "failed";
   generationError?: string;
@@ -457,6 +469,13 @@ export type ProgressiveGenerationData = {
   colorJson?: string;
   typographyJson?: string;
   voiceJson?: string;
+  photographyDirectionJson?: string;
+  photographs?: Array<{
+    role: (typeof photographRoles)[number];
+    state: "generating" | "ready" | "failed";
+    alt: string;
+    url?: string;
+  }>;
 };
 
 function parseJson<Schema extends z.ZodType>(
@@ -506,6 +525,10 @@ export function createProgressiveBrandSystem(
     typographyGenerationSchema,
   );
   const voice = parseJson(generation.voiceJson, voiceGenerationSchema);
+  const photographyDirection = parseJson(
+    generation.photographyDirectionJson,
+    photographyDirectionSchema,
+  );
 
   const regions = fallback.regions.map((region): BrandRegion => {
     switch (region.id) {
@@ -581,6 +604,72 @@ export function createProgressiveBrandSystem(
             ? { summary: voice.summary, rules: voice.rules, content: voice }
             : {}),
         };
+      case "photography": {
+        if (!photographyDirection) {
+          return {
+            ...region,
+            state:
+              generation.generationStage === "photography-direction"
+                ? generation.generationError
+                  ? "failed"
+                  : "generating"
+                : "unfinished",
+            content: {
+              ...region.content,
+              photographs: region.content.photographs.map((photograph) => ({
+                role: photograph.role,
+                state:
+                  generation.generationStage === "photography-direction"
+                    ? ("generating" as const)
+                    : ("unfinished" as const),
+                alt: photograph.alt,
+              })),
+            },
+          };
+        }
+
+        const photographs = photographRoles.map((role) => {
+          const photograph = generation.photographs?.find(
+            (candidate) => candidate.role === role,
+          );
+          const shot = photographyDirection.shots.find(
+            (candidate) => candidate.role === role,
+          );
+          if (!shot) {
+            throw new Error(`Photography direction is missing ${role}`);
+          }
+          const state: "unfinished" | "generating" | "ready" | "failed" =
+            photograph?.state ?? "unfinished";
+          return {
+            role,
+            state,
+            alt: photograph?.alt ?? shot.alt,
+            ...(photograph?.url ? { url: photograph.url } : {}),
+          };
+        });
+        const hasPending = photographs.some(
+          (photograph) =>
+            photograph.state === "unfinished" ||
+            photograph.state === "generating",
+        );
+        const hasFailure = photographs.some(
+          (photograph) => photograph.state === "failed",
+        );
+
+        return {
+          ...region,
+          state: hasPending ? "generating" : hasFailure ? "failed" : "ready",
+          summary: photographyDirection.summary,
+          rules: photographyDirection.rules,
+          content: {
+            direction: [
+              photographyDirection.aesthetic,
+              photographyDirection.lighting,
+            ].join(" "),
+            photographs,
+          },
+        };
+      }
       default:
         return region;
     }
