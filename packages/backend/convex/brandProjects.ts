@@ -5,7 +5,12 @@ import {
 import { ConvexError, v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { type MutationCtx, mutation, query } from "./_generated/server";
+import {
+  type MutationCtx,
+  mutation,
+  type QueryCtx,
+  query,
+} from "./_generated/server";
 import { authComponent } from "./auth";
 import { photographRoles } from "./brandGenerationContract";
 import {
@@ -55,6 +60,7 @@ const brandProjectFields = {
   motionJson: v.optional(v.string()),
   interfaceJson: v.optional(v.string()),
   designTokensJson: v.optional(v.string()),
+  reviewToken: v.optional(v.string()),
 };
 
 const brandProjectValidator = v.object(brandProjectFields);
@@ -69,6 +75,39 @@ const brandPhotographValidator = v.object({
   alt: v.string(),
   url: v.optional(v.string()),
 });
+
+async function getBrandPhotographs(
+  ctx: QueryCtx,
+  projectId: Id<"brandProjects">,
+) {
+  const records = await ctx.db
+    .query("brandPhotographs")
+    .withIndex("by_project_and_role", (q) => q.eq("projectId", projectId))
+    .take(photographRoles.length);
+  const byRole = new Map(records.map((record) => [record.role, record]));
+
+  return await Promise.all(
+    photographRoles.flatMap((role) => {
+      const record = byRole.get(role);
+      if (!record) {
+        return [];
+      }
+      return [
+        (async () => {
+          const url = record.storageId
+            ? await ctx.storage.getUrl(record.storageId)
+            : null;
+          return {
+            role: record.role,
+            state: record.state,
+            alt: record.alt,
+            ...(url ? { url } : {}),
+          };
+        })(),
+      ];
+    }),
+  );
+}
 
 async function getOwnerId(
   ctx: Parameters<typeof authComponent.getAuthUser>[0],
@@ -126,6 +165,7 @@ function getCopyableBrandProjectData(project: Doc<"brandProjects">) {
     activeOperationKind,
     revisingRegionIds,
     revisionError,
+    reviewToken,
     ...copyableData
   } = project;
   void [
@@ -139,6 +179,7 @@ function getCopyableBrandProjectData(project: Doc<"brandProjects">) {
     activeOperationKind,
     revisingRegionIds,
     revisionError,
+    reviewToken,
   ];
   return copyableData;
 }
@@ -221,34 +262,93 @@ export const get = query({
       return null;
     }
 
-    const records = await ctx.db
-      .query("brandPhotographs")
-      .withIndex("by_project_and_role", (q) => q.eq("projectId", projectId))
-      .take(photographRoles.length);
-    const byRole = new Map(records.map((record) => [record.role, record]));
-    const photographs = await Promise.all(
-      photographRoles.flatMap((role) => {
-        const record = byRole.get(role);
-        if (!record) {
-          return [];
-        }
-        return [
-          (async () => {
-            const url = record.storageId
-              ? await ctx.storage.getUrl(record.storageId)
-              : null;
-            return {
-              role: record.role,
-              state: record.state,
-              alt: record.alt,
-              ...(url ? { url } : {}),
-            };
-          })(),
-        ];
-      }),
-    );
+    const photographs = await getBrandPhotographs(ctx, projectId);
 
     return { ...project, photographs };
+  },
+});
+
+export const getForReview = query({
+  args: { reviewToken: v.string() },
+  returns: v.union(
+    v.object({
+      name: v.optional(v.string()),
+      companyName: v.string(),
+      description: v.string(),
+      generationStage: v.optional(generationStageValidator),
+      generationError: v.optional(v.string()),
+      builtInFallback: v.optional(v.boolean()),
+      directionJson: v.optional(v.string()),
+      logoJson: v.optional(v.string()),
+      colorJson: v.optional(v.string()),
+      typographyJson: v.optional(v.string()),
+      voiceJson: v.optional(v.string()),
+      photographyDirectionJson: v.optional(v.string()),
+      motionJson: v.optional(v.string()),
+      interfaceJson: v.optional(v.string()),
+      designTokensJson: v.optional(v.string()),
+      photographs: v.array(brandPhotographValidator),
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, { reviewToken }) => {
+    const project = await ctx.db
+      .query("brandProjects")
+      .withIndex("by_review_token", (q) => q.eq("reviewToken", reviewToken))
+      .unique();
+    if (!project) {
+      return null;
+    }
+
+    const photographs = await getBrandPhotographs(ctx, project._id);
+
+    return {
+      name: project.name,
+      companyName: project.companyName,
+      description: project.description,
+      generationStage: project.generationStage,
+      generationError: project.generationError
+        ? "A Brand Region could not be generated"
+        : undefined,
+      builtInFallback: project.builtInFallback,
+      directionJson: project.directionJson,
+      logoJson: project.logoJson,
+      colorJson: project.colorJson,
+      typographyJson: project.typographyJson,
+      voiceJson: project.voiceJson,
+      photographyDirectionJson: project.photographyDirectionJson,
+      motionJson: project.motionJson,
+      interfaceJson: project.interfaceJson,
+      designTokensJson: project.designTokensJson,
+      photographs,
+    };
+  },
+});
+
+export const createReviewLink = mutation({
+  args: { projectId: v.id("brandProjects") },
+  returns: v.string(),
+  handler: async (ctx, { projectId }) => {
+    const ownerId = await getOwnerId(ctx);
+    const project = await getOwnedBrandProject(ctx, ownerId, projectId);
+    if (project.reviewToken) {
+      return project.reviewToken;
+    }
+
+    const reviewToken = crypto.randomUUID();
+    await ctx.db.patch(projectId, { reviewToken });
+    return reviewToken;
+  },
+});
+
+export const revokeReviewLink = mutation({
+  args: { projectId: v.id("brandProjects") },
+  returns: v.null(),
+  handler: async (ctx, { projectId }) => {
+    const ownerId = await getOwnerId(ctx);
+    await getOwnedBrandProject(ctx, ownerId, projectId);
+    await ctx.db.patch(projectId, { reviewToken: undefined });
+    return null;
   },
 });
 

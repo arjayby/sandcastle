@@ -512,14 +512,16 @@ export default function BrandSystemCanvas({
   onRevise,
   onLoadBuiltInFallback,
   onSignOut,
+  toolbarAction,
 }: {
   projectName: string;
   description: string;
   generation: ProgressiveGenerationData;
-  onRetryRegion: (region: BrandRegion["id"]) => Promise<unknown>;
-  onRevise: (request: string, region?: BrandRegion["id"]) => Promise<unknown>;
-  onLoadBuiltInFallback: () => Promise<unknown>;
-  onSignOut: () => void;
+  onRetryRegion?: (region: BrandRegion["id"]) => Promise<unknown>;
+  onRevise?: (request: string, region?: BrandRegion["id"]) => Promise<unknown>;
+  onLoadBuiltInFallback?: () => Promise<unknown>;
+  onSignOut?: () => void;
+  toolbarAction?: React.ReactNode;
 }) {
   const brandSystem = useMemo(
     () => createProgressiveBrandSystem(projectName, generation),
@@ -775,13 +777,17 @@ export default function BrandSystemCanvas({
     >
       <link rel="stylesheet" href={typographyRegion.content.stylesheetUrl} />
       <header className="flex min-h-16 items-center gap-3 border-b bg-background px-3 py-2 md:px-4">
-        <Link
-          to="/dashboard"
-          className={buttonVariants({ variant: "outline", size: "sm" })}
-        >
-          All Brand Projects
-        </Link>
-        <Separator orientation="vertical" className="hidden h-7 md:block" />
+        {onSignOut ? (
+          <>
+            <Link
+              to="/dashboard"
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+            >
+              All Brand Projects
+            </Link>
+            <Separator orientation="vertical" className="hidden h-7 md:block" />
+          </>
+        ) : null}
         <div className="min-w-0 flex-1">
           <h1 className="truncate font-medium text-sm">
             {projectName} Brand System
@@ -790,25 +796,28 @@ export default function BrandSystemCanvas({
             {directionName ? `${directionName} · ${description}` : description}
           </p>
         </div>
-        {completeProviderFailure ? (
+        {completeProviderFailure && onLoadBuiltInFallback ? (
           <Button size="sm" onClick={() => void onLoadBuiltInFallback()}>
             <PackageOpenIcon data-icon="inline-start" />
             Use built in fallback
           </Button>
         ) : null}
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={!revisionAvailable}
-          aria-label="Revise complete Brand System"
-          onClick={() => {
-            setSelectedRegionId(null);
-            setIsSystemRevisionOpen(true);
-          }}
-        >
-          <SparklesIcon data-icon="inline-start" />
-          <span className="hidden sm:inline">Revise system</span>
-        </Button>
+        {onRevise ? (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!revisionAvailable}
+            aria-label="Revise complete Brand System"
+            onClick={() => {
+              setSelectedRegionId(null);
+              setIsSystemRevisionOpen(true);
+            }}
+          >
+            <SparklesIcon data-icon="inline-start" />
+            <span className="hidden sm:inline">Revise system</span>
+          </Button>
+        ) : null}
+        {toolbarAction}
         <div className="flex items-center gap-1 rounded-md border bg-background p-1">
           <Button
             variant="ghost"
@@ -842,14 +851,16 @@ export default function BrandSystemCanvas({
             <span className="hidden sm:inline">Fit</span>
           </Button>
         </div>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Sign out"
-          onClick={onSignOut}
-        >
-          <LogOutIcon />
-        </Button>
+        {onSignOut ? (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Sign out"
+            onClick={onSignOut}
+          >
+            <LogOutIcon />
+          </Button>
+        ) : null}
       </header>
 
       <div
@@ -937,7 +948,9 @@ export default function BrandSystemCanvas({
               region={region}
               isSelected={region.id === selectedRegionId}
               onSelect={(event) => selectRegion(region, event)}
-              onRetry={() => void onRetryRegion(region.id)}
+              onRetry={
+                onRetryRegion ? () => void onRetryRegion(region.id) : undefined
+              }
             />
           ))}
         </section>
@@ -976,13 +989,15 @@ export default function BrandSystemCanvas({
                 <li key={rule}>{rule}</li>
               ))}
             </ul>
-            <SemanticRevisionForm
-              key={selectedRegion.id}
-              targetName={selectedRegion.name}
-              dependencies={directBrandRegionDependencies[selectedRegion.id]}
-              disabled={!revisionAvailable}
-              onSubmit={(request) => onRevise(request, selectedRegion.id)}
-            />
+            {onRevise ? (
+              <SemanticRevisionForm
+                key={selectedRegion.id}
+                targetName={selectedRegion.name}
+                dependencies={directBrandRegionDependencies[selectedRegion.id]}
+                disabled={!revisionAvailable}
+                onSubmit={(request) => onRevise(request, selectedRegion.id)}
+              />
+            ) : null}
             <Button
               className="mt-6 w-full"
               variant="outline"
@@ -993,7 +1008,7 @@ export default function BrandSystemCanvas({
             </Button>
           </aside>
         ) : null}
-        {!selectedRegion && isSystemRevisionOpen ? (
+        {!selectedRegion && isSystemRevisionOpen && onRevise ? (
           <aside
             ref={inspectorRef}
             aria-label="Brand System revision inspector"

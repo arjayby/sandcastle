@@ -33,9 +33,11 @@ export default defineSchema({
     motionJson: v.optional(v.string()),
     interfaceJson: v.optional(v.string()),
     designTokensJson: v.optional(v.string()),
+    reviewToken: v.optional(v.string()),
   })
     .index("by_owner_and_updated_at", ["ownerId", "updatedAt"])
-    .index("by_owner_and_draft", ["ownerId", "draftId"]),
+    .index("by_owner_and_draft", ["ownerId", "draftId"])
+    .index("by_review_token", ["reviewToken"]),
   brandPhotographs: defineTable({
     projectId: v.id("brandProjects"),
     role: photographRoleValidator,

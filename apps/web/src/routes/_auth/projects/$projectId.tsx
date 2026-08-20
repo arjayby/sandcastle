@@ -12,6 +12,7 @@ import { useMutation, useQuery } from "convex/react";
 
 import BrandCanvas from "@/components/brand-canvas";
 import BrandSystemCanvas from "@/components/brand-system-canvas";
+import ReviewLinkDialog from "@/components/review-link-dialog";
 import { authClient } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/_auth/projects/$projectId")({
@@ -60,25 +61,7 @@ function BrandProjectPage() {
     <BrandSystemCanvas
       projectName={project.name ?? project.companyName}
       description={project.description}
-      generation={{
-        generationStage: project.generationStage,
-        generationError: project.generationError,
-        activeOperationId: project.activeOperationId,
-        activeOperationKind: project.activeOperationKind,
-        revisingRegionIds: project.revisingRegionIds,
-        revisionError: project.revisionError,
-        builtInFallback: project.builtInFallback,
-        directionJson: project.directionJson,
-        logoJson: project.logoJson,
-        colorJson: project.colorJson,
-        typographyJson: project.typographyJson,
-        voiceJson: project.voiceJson,
-        photographyDirectionJson: project.photographyDirectionJson,
-        photographs: project.photographs,
-        motionJson: project.motionJson,
-        interfaceJson: project.interfaceJson,
-        designTokensJson: project.designTokensJson,
-      }}
+      generation={project}
       onRetryRegion={(region) =>
         retryRegion({ projectId: brandProjectId, region })
       }
@@ -93,6 +76,12 @@ function BrandProjectPage() {
         loadBuiltInFallback({ projectId: brandProjectId })
       }
       onSignOut={() => authClient.signOut()}
+      toolbarAction={
+        <ReviewLinkDialog
+          projectId={brandProjectId}
+          reviewToken={project.reviewToken}
+        />
+      }
     />
   );
 }
