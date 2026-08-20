@@ -90,7 +90,9 @@ test("a Brand Builder can create, authenticate, reopen, and persist an owned Bra
   const progressivePhotography = page.getByRole("button", {
     name: "Photography Brand Region",
   });
-  await expect(progressivePhotography.getByText("Generating")).toBeVisible();
+  await expect(
+    progressivePhotography.getByText("Generating", { exact: true }),
+  ).toBeVisible();
   await expect(
     progressivePhotography.getByRole("img", {
       name: "A small team planning together in a sunlit studio",
