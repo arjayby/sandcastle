@@ -411,13 +411,15 @@ export default function BrandSystemCanvas({
   onRetryRegion,
   onLoadBuiltInFallback,
   onSignOut,
+  toolbarAction,
 }: {
   projectName: string;
   description: string;
   generation: ProgressiveGenerationData;
-  onRetryRegion: (region: BrandRegion["id"]) => Promise<unknown>;
-  onLoadBuiltInFallback: () => Promise<unknown>;
-  onSignOut: () => void;
+  onRetryRegion?: (region: BrandRegion["id"]) => Promise<unknown>;
+  onLoadBuiltInFallback?: () => Promise<unknown>;
+  onSignOut?: () => void;
+  toolbarAction?: React.ReactNode;
 }) {
   const brandSystem = useMemo(
     () => createProgressiveBrandSystem(projectName, generation),
@@ -666,13 +668,17 @@ export default function BrandSystemCanvas({
     >
       <link rel="stylesheet" href={typographyRegion.content.stylesheetUrl} />
       <header className="flex min-h-16 items-center gap-3 border-b bg-background px-3 py-2 md:px-4">
-        <Link
-          to="/dashboard"
-          className={buttonVariants({ variant: "outline", size: "sm" })}
-        >
-          All Brand Projects
-        </Link>
-        <Separator orientation="vertical" className="hidden h-7 md:block" />
+        {onSignOut ? (
+          <>
+            <Link
+              to="/dashboard"
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+            >
+              All Brand Projects
+            </Link>
+            <Separator orientation="vertical" className="hidden h-7 md:block" />
+          </>
+        ) : null}
         <div className="min-w-0 flex-1">
           <h1 className="truncate font-medium text-sm">
             {projectName} Brand System
@@ -681,12 +687,13 @@ export default function BrandSystemCanvas({
             {directionName ? `${directionName} · ${description}` : description}
           </p>
         </div>
-        {completeProviderFailure ? (
+        {completeProviderFailure && onLoadBuiltInFallback ? (
           <Button size="sm" onClick={() => void onLoadBuiltInFallback()}>
             <PackageOpenIcon data-icon="inline-start" />
             Use built in fallback
           </Button>
         ) : null}
+        {toolbarAction}
         <div className="flex items-center gap-1 rounded-md border bg-background p-1">
           <Button
             variant="ghost"
@@ -720,14 +727,16 @@ export default function BrandSystemCanvas({
             <span className="hidden sm:inline">Fit</span>
           </Button>
         </div>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Sign out"
-          onClick={onSignOut}
-        >
-          <LogOutIcon />
-        </Button>
+        {onSignOut ? (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Sign out"
+            onClick={onSignOut}
+          >
+            <LogOutIcon />
+          </Button>
+        ) : null}
       </header>
 
       <div
@@ -814,7 +823,9 @@ export default function BrandSystemCanvas({
               region={region}
               isSelected={region.id === selectedRegionId}
               onSelect={(event) => selectRegion(region, event)}
-              onRetry={() => void onRetryRegion(region.id)}
+              onRetry={
+                onRetryRegion ? () => void onRetryRegion(region.id) : undefined
+              }
             />
           ))}
         </section>
