@@ -33,6 +33,16 @@ export const brandRegionIdValidator = v.union(
   v.literal("design-tokens"),
 );
 
+export type BrandRegionId =
+  | "logo"
+  | "color"
+  | "typography"
+  | "voice-and-tone"
+  | "photography"
+  | "motion"
+  | "interface-foundation"
+  | "design-tokens";
+
 export const operationKindValidator = v.union(
   v.literal("generation"),
   v.literal("revision"),

@@ -2,6 +2,7 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 import {
+  brandRegionIdValidator,
   generationStageValidator,
   operationKindValidator,
   photographRoleValidator,
@@ -19,6 +20,8 @@ export default defineSchema({
     generationError: v.optional(v.string()),
     activeOperationId: v.optional(v.string()),
     activeOperationKind: v.optional(operationKindValidator),
+    revisingRegionIds: v.optional(v.array(brandRegionIdValidator)),
+    revisionError: v.optional(v.string()),
     generationRecoveryCount: v.optional(v.number()),
     builtInFallback: v.optional(v.boolean()),
     directionJson: v.optional(v.string()),

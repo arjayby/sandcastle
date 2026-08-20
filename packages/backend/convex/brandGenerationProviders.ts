@@ -39,6 +39,10 @@ export type GenerationContext = {
   description: string;
   providerAttempt?: number;
   recoveryCount?: number;
+  semanticRevision?: {
+    request: string;
+    currentRegion: unknown;
+  };
 };
 
 export type DirectedGenerationContext = GenerationContext & {
@@ -109,7 +113,7 @@ function typeScaleTokenName(name: string, index: number) {
   );
 }
 
-function enforceTokenDependencies(
+export function enforceTokenDependencies(
   context: AppliedGenerationContext,
   candidate: unknown,
 ) {
@@ -153,13 +157,17 @@ const controlledSymbolSvg =
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><title>Northstar symbol</title><path fill="#17231F" d="M40 5l10 25 25 10-25 10-10 25-10-25L5 40l25-10z"/></svg>';
 
 const controlledProvider: BrandGenerationProvider = {
-  async createDirection() {
+  async createDirection(_ctx, context) {
     await controlledPause();
+    const isCompleteRevision = Boolean(context.semanticRevision);
     return brandDirectionSchema.parse({
-      name: "Northstar signal",
-      concept:
-        "A calm navigation system that turns independent planning into shared forward motion.",
-      attributes: ["Clear", "Steady", "Resourceful"],
+      name: isCompleteRevision ? "Decisive signal" : "Northstar signal",
+      concept: isCompleteRevision
+        ? "A bold navigation system that turns shared intent into decisive forward motion."
+        : "A calm navigation system that turns independent planning into shared forward motion.",
+      attributes: isCompleteRevision
+        ? ["Bold", "Direct", "Resourceful"]
+        : ["Clear", "Steady", "Resourceful"],
     });
   },
   async createLogo(_ctx, context) {
@@ -180,7 +188,9 @@ const controlledProvider: BrandGenerationProvider = {
       ],
       wordmark: context.companyName.toUpperCase(),
       monogram: context.companyName.slice(0, 1).toUpperCase(),
-      tagline: "Plan with a clearer signal.",
+      tagline: context.semanticRevision
+        ? "Build a bolder shared signal."
+        : "Plan with a clearer signal.",
       primaryLockupSvg: controlledPrimaryLockupSvg,
       wordmarkSvg: controlledWordmarkSvg,
       symbolSvg: controlledSymbolSvg,
@@ -196,10 +206,17 @@ const controlledProvider: BrandGenerationProvider = {
     ) {
       throw new Error("Controlled color provider failure");
     }
+    const oceanRevision = context.semanticRevision?.request
+      .toLowerCase()
+      .includes("ocean");
     return colorGenerationSchema.parse({
-      summary: "Deep navigation ink with bright, purposeful signals.",
+      summary: oceanRevision
+        ? "Deep navigation ink with a confident ocean signal."
+        : "Deep navigation ink with bright, purposeful signals.",
       rules: [
-        "Use Signal Gold for the primary action.",
+        oceanRevision
+          ? "Use Horizon Blue for the primary action."
+          : "Use Signal Gold for the primary action.",
         "Use Harbor Ink for text and anchoring surfaces.",
         "Reserve Coral for short emphasis and warnings.",
       ],
@@ -212,8 +229,8 @@ const controlledProvider: BrandGenerationProvider = {
           contrast: "pass",
         },
         {
-          name: "Signal Gold",
-          value: "#EDB33F",
+          name: oceanRevision ? "Horizon Blue" : "Signal Gold",
+          value: oceanRevision ? "#3F6FED" : "#EDB33F",
           role: "Primary",
           usage: "Primary actions and key markers",
           contrast: "pass",
@@ -242,7 +259,7 @@ const controlledProvider: BrandGenerationProvider = {
       ],
     });
   },
-  async createTypography() {
+  async createTypography(_ctx, context) {
     await controlledPause();
     return typographyGenerationSchema.parse({
       summary: "Editorial confidence paired with highly legible working text.",
@@ -262,12 +279,14 @@ const controlledProvider: BrandGenerationProvider = {
         { name: "Heading", size: "36px", lineHeight: "40px", weight: 600 },
         { name: "Body", size: "18px", lineHeight: "28px", weight: 400 },
       ],
-      sampleHeadline: "Find the clearest way forward.",
+      sampleHeadline: context.semanticRevision
+        ? "Make the next move unmistakable."
+        : "Find the clearest way forward.",
       stylesheetUrl:
         "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:wght@400;600&display=swap",
     });
   },
-  async createVoice() {
+  async createVoice(_ctx, context) {
     await controlledPause();
     return voiceGenerationSchema.parse({
       summary: "Clear guidance that respects the Brand Builder's judgment.",
@@ -276,7 +295,9 @@ const controlledProvider: BrandGenerationProvider = {
         "Give one clear next step.",
         "Sound confident without making inflated claims.",
       ],
-      promise: "Turn uncertain planning into shared forward motion.",
+      promise: context.semanticRevision
+        ? "Turn shared conviction into unmistakable forward motion."
+        : "Turn uncertain planning into shared forward motion.",
       principles: [
         "Clear, not clinical",
         "Steady, not slow",
@@ -284,7 +305,9 @@ const controlledProvider: BrandGenerationProvider = {
       ],
       preferredWords: ["Signal", "Shape", "Forward", "Together"],
       avoidedWords: ["Effortless", "Magic", "Disrupt", "Revolutionary"],
-      headline: "Find the clearest way forward.",
+      headline: context.semanticRevision
+        ? "Make the next move unmistakable."
+        : "Find the clearest way forward.",
       body: "Bring plans, decisions, and progress into one calm view your team can act on.",
       callToAction: "Set your direction",
       beforeAfter: {
@@ -309,6 +332,9 @@ const controlledProvider: BrandGenerationProvider = {
   },
   async createInterface(_ctx, context) {
     await controlledPause();
+    const oceanRevision = context.semanticRevision?.request
+      .toLowerCase()
+      .includes("ocean");
     return interfaceGenerationSchema.parse({
       summary: "Calm editorial surfaces with direct product controls.",
       rules: [
@@ -320,7 +346,9 @@ const controlledProvider: BrandGenerationProvider = {
       components: ["Buttons", "Inputs", "Cards", "Navigation", "Website"],
       example: {
         brandName: context.companyName,
-        headline: context.voice.headline,
+        headline: oceanRevision
+          ? "Move with a clearer horizon."
+          : context.voice.headline,
         body: context.voice.body,
         callToAction: context.voice.callToAction,
         secondaryAction: "See the approach",
@@ -356,10 +384,12 @@ const controlledProvider: BrandGenerationProvider = {
       motion: { duration: "320ms", easing: "cubic-bezier(0, 0, 1, 1)" },
     });
   },
-  async createPhotographyDirection() {
+  async createPhotographyDirection(_ctx, context) {
     await controlledPause();
     return photographyDirectionSchema.parse({
-      summary: "Observed teamwork shaped by warm directional light.",
+      summary: context.semanticRevision
+        ? "Decisive teamwork shaped by bold directional light."
+        : "Observed teamwork shaped by warm directional light.",
       aesthetic: "Documentary, tactile, composed, and quietly optimistic.",
       lighting: "Low winter sunlight with gentle natural shadow.",
       palette: ["Harbor ink", "Signal gold", "Warm paper"],
@@ -409,7 +439,9 @@ const liveProvider: BrandGenerationProvider = {
       { userId: context.ownerId },
       {
         schema: brandDirectionSchema,
-        prompt: `Create one internal brand direction before any visible Brand Region. Brand Brief: ${JSON.stringify({ companyName: context.companyName, description: context.description })}`,
+        prompt: context.semanticRevision
+          ? `Revise the internal brand direction according to the Brand Builder's Semantic Revision. Return the complete revised direction. ${JSON.stringify({ companyName: context.companyName, description: context.description, request: context.semanticRevision.request, currentDirection: context.semanticRevision.currentRegion })}`
+          : `Create one internal brand direction before any visible Brand Region. Brand Brief: ${JSON.stringify({ companyName: context.companyName, description: context.description })}`,
       },
     );
     return brandDirectionSchema.parse(result.object);
@@ -564,6 +596,9 @@ async function inspectBrandPhotograph(data: Uint8Array, mediaType: string) {
 }
 
 function regionPrompt(region: string, context: DirectedGenerationContext) {
+  if (context.semanticRevision) {
+    return `Revise the existing ${region} Brand Region according to the Brand Builder's Semantic Revision. Preserve a coherent identity and return the complete revised region. ${JSON.stringify({ companyName: context.companyName, description: context.description, direction: context.direction, request: context.semanticRevision.request, currentRegion: context.semanticRevision.currentRegion })}`;
+  }
   return `Generate the ${region} Brand Region for this Brand Brief and direction. Keep one coherent identity. ${JSON.stringify({ companyName: context.companyName, description: context.description, direction: context.direction })}`;
 }
 

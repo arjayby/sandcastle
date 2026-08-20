@@ -22,6 +22,7 @@ function BrandProjectPage() {
   const { projectId } = Route.useParams();
   const brandProjectId = projectId as Id<"brandProjects">;
   const retryRegion = useMutation(api.brandProjects.retryRegion);
+  const revise = useMutation(api.brandProjects.revise);
   const loadBuiltInFallback = useMutation(
     api.brandProjects.loadBuiltInFallback,
   );
@@ -62,6 +63,10 @@ function BrandProjectPage() {
       generation={{
         generationStage: project.generationStage,
         generationError: project.generationError,
+        activeOperationId: project.activeOperationId,
+        activeOperationKind: project.activeOperationKind,
+        revisingRegionIds: project.revisingRegionIds,
+        revisionError: project.revisionError,
         builtInFallback: project.builtInFallback,
         directionJson: project.directionJson,
         logoJson: project.logoJson,
@@ -76,6 +81,13 @@ function BrandProjectPage() {
       }}
       onRetryRegion={(region) =>
         retryRegion({ projectId: brandProjectId, region })
+      }
+      onRevise={(request, region) =>
+        revise({
+          projectId: brandProjectId,
+          request,
+          ...(region ? { region } : {}),
+        })
       }
       onLoadBuiltInFallback={() =>
         loadBuiltInFallback({ projectId: brandProjectId })

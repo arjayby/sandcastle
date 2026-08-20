@@ -367,9 +367,14 @@ function DesignTokensRegion({
           </p>
           <h2 className="mt-1 font-semibold text-lg">{region.name}</h2>
         </div>
-        <p className="text-[var(--brand-paper)]/75 text-xs">
-          CSS · JSON · Ready for production
-        </p>
+        <div className="flex flex-col gap-1 text-[var(--brand-paper)]/75 text-xs">
+          <span>CSS · JSON</span>
+          <span>
+            {region.state === "ready"
+              ? "Ready for production"
+              : generationStateLabels[region.state]}
+          </span>
+        </div>
       </div>
       <div className="grid min-w-0 grid-cols-2 gap-4 overflow-hidden pl-5">
         <section aria-label="CSS design tokens" className="overflow-hidden">
@@ -395,7 +400,7 @@ function BrandRegionContent({ region }: { region: BrandRegion }) {
     return <PhotographyRegion region={region} />;
   }
 
-  if (region.state !== "ready") {
+  if (region.state !== "ready" && region.state !== "revising") {
     return <PendingRegion region={region} />;
   }
 
