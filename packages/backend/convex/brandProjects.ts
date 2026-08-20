@@ -21,6 +21,11 @@ import {
 } from "./brandGenerationValidators";
 import { claimBrandProjectOperation } from "./brandOperationContract";
 import { getSemanticRevisionRegions } from "./brandRevisionContract";
+import {
+  deleteBrandRevision,
+  navigateBrandRevision,
+} from "./brandRevisionHistory";
+import { revisionHistoryLimit } from "./revisionHistoryContract";
 
 const appliedGenerationStages = new Set([
   "motion",
@@ -61,6 +66,8 @@ const brandProjectFields = {
   interfaceJson: v.optional(v.string()),
   designTokensJson: v.optional(v.string()),
   reviewToken: v.optional(v.string()),
+  revisionCursor: v.optional(v.number()),
+  revisionSequence: v.optional(v.number()),
 };
 
 const brandProjectValidator = v.object(brandProjectFields);
@@ -166,6 +173,8 @@ function getCopyableBrandProjectData(project: Doc<"brandProjects">) {
     revisingRegionIds,
     revisionError,
     reviewToken,
+    revisionCursor,
+    revisionSequence,
     ...copyableData
   } = project;
   void [
@@ -180,6 +189,8 @@ function getCopyableBrandProjectData(project: Doc<"brandProjects">) {
     revisingRegionIds,
     revisionError,
     reviewToken,
+    revisionCursor,
+    revisionSequence,
   ];
   return copyableData;
 }
@@ -252,6 +263,8 @@ export const get = query({
     v.object({
       ...brandProjectFields,
       photographs: v.array(brandPhotographValidator),
+      canUndo: v.boolean(),
+      canRedo: v.boolean(),
     }),
     v.null(),
   ),
@@ -263,8 +276,29 @@ export const get = query({
     }
 
     const photographs = await getBrandPhotographs(ctx, projectId);
+    const cursor = project.revisionCursor ?? 0;
+    const [undoRevision, redoRevision] = await Promise.all([
+      ctx.db
+        .query("revisions")
+        .withIndex("by_project_and_sequence", (q) =>
+          q.eq("projectId", projectId).lte("sequence", cursor),
+        )
+        .order("desc")
+        .first(),
+      ctx.db
+        .query("revisions")
+        .withIndex("by_project_and_sequence", (q) =>
+          q.eq("projectId", projectId).gt("sequence", cursor),
+        )
+        .first(),
+    ]);
 
-    return { ...project, photographs };
+    return {
+      ...project,
+      photographs,
+      canUndo: Boolean(undoRevision),
+      canRedo: Boolean(redoRevision),
+    };
   },
 });
 
@@ -626,6 +660,28 @@ export const revise = mutation({
   },
 });
 
+export const undo = mutation({
+  args: { projectId: v.id("brandProjects") },
+  returns: v.null(),
+  handler: async (ctx, { projectId }) => {
+    const ownerId = await getOwnerId(ctx);
+    const project = await getOwnedBrandProject(ctx, ownerId, projectId);
+    await navigateBrandRevision(ctx, project, "undo");
+    return null;
+  },
+});
+
+export const redo = mutation({
+  args: { projectId: v.id("brandProjects") },
+  returns: v.null(),
+  handler: async (ctx, { projectId }) => {
+    const ownerId = await getOwnerId(ctx);
+    const project = await getOwnedBrandProject(ctx, ownerId, projectId);
+    await navigateBrandRevision(ctx, project, "redo");
+    return null;
+  },
+});
+
 export const loadBuiltInFallback = mutation({
   args: { projectId: v.id("brandProjects") },
   returns: v.null(),
@@ -660,6 +716,15 @@ export const remove = mutation({
     const ownerId = await getOwnerId(ctx);
     await getOwnedBrandProject(ctx, ownerId, projectId);
 
+    const revisions = await ctx.db
+      .query("revisions")
+      .withIndex("by_project_and_sequence", (q) => q.eq("projectId", projectId))
+      .take(revisionHistoryLimit);
+    for (const revision of revisions) {
+      await deleteBrandRevision(ctx, revision);
+    }
+
+    const activeStorageIds = new Set<Id<"_storage">>();
     const photographs = await ctx.db
       .query("brandPhotographs")
       .withIndex("by_project_and_role", (q) => q.eq("projectId", projectId))
@@ -667,18 +732,25 @@ export const remove = mutation({
     for (const photograph of photographs) {
       await ctx.db.delete(photograph._id);
       if (photograph.storageId) {
-        const remainingReference = await ctx.db
-          .query("brandPhotographs")
-          .withIndex("by_storage_id", (q) =>
-            q.eq("storageId", photograph.storageId),
-          )
-          .first();
-        if (!remainingReference) {
-          await ctx.storage.delete(photograph.storageId);
-        }
+        activeStorageIds.add(photograph.storageId);
       }
     }
     await ctx.db.delete(projectId);
+    for (const storageId of activeStorageIds) {
+      const [activeReference, historyReference] = await Promise.all([
+        ctx.db
+          .query("brandPhotographs")
+          .withIndex("by_storage_id", (q) => q.eq("storageId", storageId))
+          .first(),
+        ctx.db
+          .query("revisionStorageReferences")
+          .withIndex("by_storage_id", (q) => q.eq("storageId", storageId))
+          .first(),
+      ]);
+      if (!activeReference && !historyReference) {
+        await ctx.storage.delete(storageId);
+      }
+    }
     return null;
   },
 });

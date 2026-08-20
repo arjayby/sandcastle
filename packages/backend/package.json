@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "convex dev",
     "dev:setup": "convex dev --configure --until-success",
-    "check-types": "tsc -p convex/tsconfig.json --noEmit"
+    "check-types": "tsc -p convex/tsconfig.json --noEmit",
+    "test": "vitest run --config vitest.config.mts"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.102",
@@ -22,8 +23,12 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@edge-runtime/vm": "^5.0.0",
     "@sandcastle/config": "workspace:*",
     "@types/node": "^24.13.3",
-    "typescript": "catalog:"
+    "convex-test": "^0.0.56",
+    "typescript": "catalog:",
+    "vite": "^8.2.1",
+    "vitest": "^4.1.11"
   }
 }

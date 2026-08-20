@@ -33,7 +33,16 @@ import {
   getSemanticRevisionRegions,
   shouldCreateBrandPhotographs,
 } from "./brandRevisionContract";
+import {
+  captureBrandRevisionSnapshot,
+  deleteBrandRevision,
+  recordBrandRevisionStorageReferences,
+} from "./brandRevisionHistory";
 import { runProviderRequest } from "./providerResponseContract";
+import {
+  acceptRevision,
+  revisionHistoryLimit,
+} from "./revisionHistoryContract";
 
 const PROVIDER_TIMEOUT_MS = 120_000;
 
@@ -212,8 +221,8 @@ export const applyRevision = internalMutation({
     ) {
       throw new ConvexError("Semantic Revision operation is no longer active");
     }
+    const before = await captureBrandRevisionSnapshot(ctx, project);
 
-    const oldStorageIds: Id<"_storage">[] = [];
     if (args.photographs) {
       for (const photograph of args.photographs) {
         const existing = await ctx.db
@@ -222,9 +231,6 @@ export const applyRevision = internalMutation({
             q.eq("projectId", args.projectId).eq("role", photograph.role),
           )
           .unique();
-        if (existing?.storageId) {
-          oldStorageIds.push(existing.storageId);
-        }
         if (existing) {
           await ctx.db.patch(existing._id, {
             state: "ready",
@@ -253,26 +259,62 @@ export const applyRevision = internalMutation({
       ...updates
     } = args;
     void [_, __, ___];
+    const cursor = project.revisionCursor ?? 0;
+    const sequence = (project.revisionSequence ?? 0) + 1;
     await ctx.db.patch(args.projectId, {
       ...updates,
       activeOperationId: undefined,
       activeOperationKind: undefined,
       revisingRegionIds: undefined,
       revisionError: undefined,
+      revisionCursor: sequence,
+      revisionSequence: sequence,
       updatedAt: Date.now(),
     });
 
-    const unreferencedStorageIds: Id<"_storage">[] = [];
-    for (const storageId of oldStorageIds) {
-      const reference = await ctx.db
-        .query("brandPhotographs")
-        .withIndex("by_storage_id", (q) => q.eq("storageId", storageId))
-        .first();
-      if (!reference) {
-        unreferencedStorageIds.push(storageId);
+    const updatedProject = await ctx.db.get(args.projectId);
+    if (!updatedProject) {
+      throw new ConvexError("Brand Project not found");
+    }
+    const after = await captureBrandRevisionSnapshot(ctx, updatedProject);
+    const existingRevisions = await ctx.db
+      .query("revisions")
+      .withIndex("by_project_and_sequence", (q) =>
+        q.eq("projectId", args.projectId),
+      )
+      .take(revisionHistoryLimit);
+    const acceptedHistory = acceptRevision(
+      {
+        revisions: existingRevisions.map((revision) => ({
+          sequence: revision.sequence,
+          before: revision.before,
+          after: revision.after,
+        })),
+        cursor,
+        nextSequence: sequence,
+      },
+      before,
+      after,
+    );
+    const retainedSequences = new Set(
+      acceptedHistory.revisions.map((revision) => revision.sequence),
+    );
+    const revisionId = await ctx.db.insert("revisions", {
+      projectId: args.projectId,
+      sequence,
+      before,
+      after,
+    });
+    await recordBrandRevisionStorageReferences(ctx, revisionId, [
+      before,
+      after,
+    ]);
+    for (const revision of existingRevisions) {
+      if (!retainedSequences.has(revision.sequence)) {
+        await deleteBrandRevision(ctx, revision);
       }
     }
-    return unreferencedStorageIds;
+    return [];
   },
 });
 

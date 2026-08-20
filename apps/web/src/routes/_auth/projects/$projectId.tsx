@@ -24,6 +24,8 @@ function BrandProjectPage() {
   const brandProjectId = projectId as Id<"brandProjects">;
   const retryRegion = useMutation(api.brandProjects.retryRegion);
   const revise = useMutation(api.brandProjects.revise);
+  const undo = useMutation(api.brandProjects.undo);
+  const redo = useMutation(api.brandProjects.redo);
   const loadBuiltInFallback = useMutation(
     api.brandProjects.loadBuiltInFallback,
   );
@@ -72,6 +74,10 @@ function BrandProjectPage() {
           ...(region ? { region } : {}),
         })
       }
+      canUndo={project.canUndo}
+      canRedo={project.canRedo}
+      onUndo={() => undo({ projectId: brandProjectId })}
+      onRedo={() => redo({ projectId: brandProjectId })}
       onLoadBuiltInFallback={() =>
         loadBuiltInFallback({ projectId: brandProjectId })
       }

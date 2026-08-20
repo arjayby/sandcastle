@@ -18,12 +18,15 @@ import type * as brandOperationContract from "../brandOperationContract.js";
 import type * as brandProjects from "../brandProjects.js";
 import type * as brandRevision from "../brandRevision.js";
 import type * as brandRevisionContract from "../brandRevisionContract.js";
+import type * as brandRevisionHistory from "../brandRevisionHistory.js";
+import type * as brandRevisionSnapshotContract from "../brandRevisionSnapshotContract.js";
 import type * as chat from "../chat.js";
 import type * as healthCheck from "../healthCheck.js";
 import type * as http from "../http.js";
 import type * as polar from "../polar.js";
 import type * as privateData from "../privateData.js";
 import type * as providerResponseContract from "../providerResponseContract.js";
+import type * as revisionHistoryContract from "../revisionHistoryContract.js";
 
 import type {
   ApiFromModules,
@@ -42,12 +45,15 @@ declare const fullApi: ApiFromModules<{
   brandProjects: typeof brandProjects;
   brandRevision: typeof brandRevision;
   brandRevisionContract: typeof brandRevisionContract;
+  brandRevisionHistory: typeof brandRevisionHistory;
+  brandRevisionSnapshotContract: typeof brandRevisionSnapshotContract;
   chat: typeof chat;
   healthCheck: typeof healthCheck;
   http: typeof http;
   polar: typeof polar;
   privateData: typeof privateData;
   providerResponseContract: typeof providerResponseContract;
+  revisionHistoryContract: typeof revisionHistoryContract;
 }>;
 
 /**
