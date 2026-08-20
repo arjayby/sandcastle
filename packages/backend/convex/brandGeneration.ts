@@ -22,31 +22,16 @@ import {
   getBrandGenerationProvider,
   getBrandImageProvider,
 } from "./brandGenerationProviders";
-
-const stageValidator = v.union(
-  v.literal("direction"),
-  v.literal("logo"),
-  v.literal("color"),
-  v.literal("typography"),
-  v.literal("voice-and-tone"),
-  v.literal("photography-direction"),
-  v.literal("photography"),
-  v.literal("ready"),
-  v.literal("failed"),
-);
+import {
+  generationStageValidator,
+  photographRoleValidator,
+} from "./brandGenerationValidators";
 
 const regionValidator = v.union(
   v.literal("logo"),
   v.literal("color"),
   v.literal("typography"),
   v.literal("voice-and-tone"),
-);
-
-const photographRoleValidator = v.union(
-  v.literal("hero"),
-  v.literal("product"),
-  v.literal("people"),
-  v.literal("texture"),
 );
 
 const generationContextValidator = v.object({
@@ -114,7 +99,7 @@ export const saveRegion = internalMutation({
     projectId: v.id("brandProjects"),
     region: regionValidator,
     resultJson: v.string(),
-    nextStage: stageValidator,
+    nextStage: generationStageValidator,
   },
   returns: v.null(),
   handler: async (ctx, { projectId, region, resultJson, nextStage }) => {

@@ -1,4 +1,5 @@
 import {
+  assertSafeBrandPhotograph,
   createPhotographPrompt,
   logoGenerationSchema,
   photographyDirectionSchema,
@@ -211,5 +212,30 @@ describe("Brand Photograph generation contract", () => {
     expect(prompt).toContain("No text, lettering, captions, or typography");
     expect(prompt).toContain("No watermarks");
     expect(prompt).toContain("No third party logos or branding");
+  });
+
+  test("rejects imagery that inspection finds unsafe for the Brand System", () => {
+    expect(() =>
+      assertSafeBrandPhotograph({
+        hasUnintendedText: true,
+        hasVisibleWatermark: false,
+        hasThirdPartyBranding: false,
+        notes: "A stray caption is visible in the lower corner.",
+      }),
+    ).toThrow("did not pass visual inspection");
+
+    expect(
+      assertSafeBrandPhotograph({
+        hasUnintendedText: false,
+        hasVisibleWatermark: false,
+        hasThirdPartyBranding: false,
+        notes: "No unsafe visual elements found.",
+      }),
+    ).toEqual({
+      hasUnintendedText: false,
+      hasVisibleWatermark: false,
+      hasThirdPartyBranding: false,
+      notes: "No unsafe visual elements found.",
+    });
   });
 });

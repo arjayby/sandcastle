@@ -1,0 +1,20 @@
+import { v } from "convex/values";
+
+export const generationStageValidator = v.union(
+  v.literal("direction"),
+  v.literal("logo"),
+  v.literal("color"),
+  v.literal("typography"),
+  v.literal("voice-and-tone"),
+  v.literal("photography-direction"),
+  v.literal("photography"),
+  v.literal("ready"),
+  v.literal("failed"),
+);
+
+export const photographRoleValidator = v.union(
+  v.literal("hero"),
+  v.literal("product"),
+  v.literal("people"),
+  v.literal("texture"),
+);

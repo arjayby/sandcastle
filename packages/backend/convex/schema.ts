@@ -1,6 +1,11 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
+import {
+  generationStageValidator,
+  photographRoleValidator,
+} from "./brandGenerationValidators";
+
 export default defineSchema({
   brandProjects: defineTable({
     ownerId: v.string(),
@@ -9,19 +14,7 @@ export default defineSchema({
     companyName: v.string(),
     description: v.string(),
     updatedAt: v.number(),
-    generationStage: v.optional(
-      v.union(
-        v.literal("direction"),
-        v.literal("logo"),
-        v.literal("color"),
-        v.literal("typography"),
-        v.literal("voice-and-tone"),
-        v.literal("photography-direction"),
-        v.literal("photography"),
-        v.literal("ready"),
-        v.literal("failed"),
-      ),
-    ),
+    generationStage: v.optional(generationStageValidator),
     generationError: v.optional(v.string()),
     directionJson: v.optional(v.string()),
     logoJson: v.optional(v.string()),
@@ -34,12 +27,7 @@ export default defineSchema({
     .index("by_owner_and_draft", ["ownerId", "draftId"]),
   brandPhotographs: defineTable({
     projectId: v.id("brandProjects"),
-    role: v.union(
-      v.literal("hero"),
-      v.literal("product"),
-      v.literal("people"),
-      v.literal("texture"),
-    ),
+    role: photographRoleValidator,
     state: v.union(
       v.literal("generating"),
       v.literal("ready"),

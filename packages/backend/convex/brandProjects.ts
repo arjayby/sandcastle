@@ -8,6 +8,10 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
 import { photographRoles } from "./brandGenerationContract";
+import {
+  generationStageValidator,
+  photographRoleValidator,
+} from "./brandGenerationValidators";
 
 const brandProjectFields = {
   _id: v.id("brandProjects"),
@@ -18,19 +22,7 @@ const brandProjectFields = {
   companyName: v.string(),
   description: v.string(),
   updatedAt: v.number(),
-  generationStage: v.optional(
-    v.union(
-      v.literal("direction"),
-      v.literal("logo"),
-      v.literal("color"),
-      v.literal("typography"),
-      v.literal("voice-and-tone"),
-      v.literal("photography-direction"),
-      v.literal("photography"),
-      v.literal("ready"),
-      v.literal("failed"),
-    ),
-  ),
+  generationStage: v.optional(generationStageValidator),
   generationError: v.optional(v.string()),
   directionJson: v.optional(v.string()),
   logoJson: v.optional(v.string()),
@@ -43,12 +35,7 @@ const brandProjectFields = {
 const brandProjectValidator = v.object(brandProjectFields);
 
 const brandPhotographValidator = v.object({
-  role: v.union(
-    v.literal("hero"),
-    v.literal("product"),
-    v.literal("people"),
-    v.literal("texture"),
-  ),
+  role: photographRoleValidator,
   state: v.union(
     v.literal("generating"),
     v.literal("ready"),

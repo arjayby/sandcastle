@@ -1,12 +1,14 @@
 import { google } from "@ai-sdk/google";
-import { generateImage } from "ai";
+import { generateImage, generateText, Output } from "ai";
 
 import type { Id } from "./_generated/dataModel";
 import type { ActionCtx } from "./_generated/server";
 import { brandAgent } from "./agent";
 import {
+  assertSafeBrandPhotograph,
   type BrandDirection,
   brandDirectionSchema,
+  brandPhotographInspectionSchema,
   type ColorGeneration,
   colorGenerationSchema,
   createPhotographPrompt,
@@ -15,6 +17,7 @@ import {
   type PhotographRole,
   type PhotographShot,
   type PhotographyDirection,
+  photographRoles,
   photographyDirectionSchema,
   type TypographyGeneration,
   typographyGenerationSchema,
@@ -323,9 +326,7 @@ const controlledPhotographColors: Record<
 
 const controlledImageProvider: BrandImageProvider = {
   async createPhotograph(_context, _direction, shot) {
-    const roleIndex = ["hero", "product", "people", "texture"].indexOf(
-      shot.role,
-    );
+    const roleIndex = photographRoles.indexOf(shot.role);
     await controlledPause(250 + roleIndex * 350);
     const colors = controlledPhotographColors[shot.role];
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900"><rect width="1200" height="900" fill="${colors[0]}"/><circle cx="860" cy="240" r="310" fill="${colors[1]}"/><path d="M0 690L420 310l300 260 220-180 260 300v210H0z" fill="${colors[2]}"/></svg>`;
@@ -338,21 +339,50 @@ const controlledImageProvider: BrandImageProvider = {
 
 const liveImageProvider: BrandImageProvider = {
   async createPhotograph(context, direction, shot) {
-    const { image } = await generateImage({
-      model: google.image("imagen-4.0-generate-001"),
-      prompt: createPhotographPrompt(
-        {
-          companyName: context.companyName,
-          description: context.description,
-        },
-        direction,
-        shot,
-      ),
-      aspectRatio: shot.role === "hero" ? "16:9" : "4:3",
-    });
-    return { data: image.uint8Array, mediaType: image.mediaType };
+    let lastError: unknown = new Error("Brand Photograph generation failed");
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        const { image } = await generateImage({
+          model: google.image("imagen-4.0-generate-001"),
+          prompt: createPhotographPrompt(
+            {
+              companyName: context.companyName,
+              description: context.description,
+            },
+            direction,
+            shot,
+          ),
+          aspectRatio: shot.role === "hero" ? "16:9" : "4:3",
+        });
+        await inspectBrandPhotograph(image.uint8Array, image.mediaType);
+        return { data: image.uint8Array, mediaType: image.mediaType };
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    throw lastError;
   },
 };
+
+async function inspectBrandPhotograph(data: Uint8Array, mediaType: string) {
+  const { output } = await generateText({
+    model: google("gemini-2.5-flash"),
+    output: Output.object({ schema: brandPhotographInspectionSchema }),
+    messages: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: "Inspect this generated Brand Photograph. Report any visible text or lettering, any watermark, and any recognizable third party logo or branding. Be strict. Do not flag ordinary unbranded objects.",
+          },
+          { type: "image", image: data, mediaType },
+        ],
+      },
+    ],
+  });
+  return assertSafeBrandPhotograph(output);
+}
 
 function regionPrompt(region: string, context: DirectedGenerationContext) {
   return `Generate the ${region} Brand Region for this Brand Brief and direction. Keep one coherent identity. ${JSON.stringify({ companyName: context.companyName, description: context.description, direction: context.direction })}`;

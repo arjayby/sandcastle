@@ -165,6 +165,27 @@ export const photographyDirectionSchema = z
     "Photography direction must contain one shot for each required role",
   );
 
+export const brandPhotographInspectionSchema = z.object({
+  hasUnintendedText: z.boolean(),
+  hasVisibleWatermark: z.boolean(),
+  hasThirdPartyBranding: z.boolean(),
+  notes: z.string().trim().min(1),
+});
+
+export function assertSafeBrandPhotograph(value: unknown) {
+  const inspection = brandPhotographInspectionSchema.parse(value);
+  if (
+    inspection.hasUnintendedText ||
+    inspection.hasVisibleWatermark ||
+    inspection.hasThirdPartyBranding
+  ) {
+    throw new Error(
+      `Generated Brand Photograph did not pass visual inspection: ${inspection.notes}`,
+    );
+  }
+  return inspection;
+}
+
 export function createPhotographPrompt(
   brandBrief: { companyName: string; description: string },
   direction: PhotographyDirection,
