@@ -7,34 +7,42 @@ import type { DataModel } from "./_generated/dataModel";
 import { query } from "./_generated/server";
 import authConfig from "./auth.config";
 
-const siteUrl = process.env.SITE_URL!;
+function getRequiredEnv(name: string) {
+	const value = process.env[name];
+	if (!value) {
+		throw new Error(`${name} is required`);
+	}
+	return value;
+}
+
+const siteUrl = getRequiredEnv("SITE_URL");
 
 export const authComponent = createClient<DataModel>(components.betterAuth);
 
 function createAuth(ctx: GenericCtx<DataModel>) {
-  return betterAuth({
-    baseURL: process.env.CONVEX_SITE_URL,
-    trustedOrigins: [siteUrl],
-    database: authComponent.adapter(ctx),
-    emailAndPassword: {
-      enabled: true,
-      requireEmailVerification: false,
-    },
-    plugins: [
-      crossDomain({ siteUrl }),
-      convex({
-        authConfig,
-        jwksRotateOnTokenGenerationError: true,
-      }),
-    ],
-  });
+	return betterAuth({
+		baseURL: process.env.CONVEX_SITE_URL,
+		trustedOrigins: [siteUrl],
+		database: authComponent.adapter(ctx),
+		emailAndPassword: {
+			enabled: true,
+			requireEmailVerification: false,
+		},
+		plugins: [
+			crossDomain({ siteUrl }),
+			convex({
+				authConfig,
+				jwksRotateOnTokenGenerationError: true,
+			}),
+		],
+	});
 }
 
 export { createAuth };
 
 export const getCurrentUser = query({
-  args: {},
-  handler: async (ctx) => {
-    return await authComponent.safeGetAuthUser(ctx);
-  },
+	args: {},
+	handler: async (ctx) => {
+		return await authComponent.safeGetAuthUser(ctx);
+	},
 });
