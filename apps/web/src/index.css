@@ -80,6 +80,33 @@
   transform: translateY(-2px);
 }
 
+@media (pointer: coarse) {
+  .brand-canvas-shell [data-slot="button"],
+  .brand-canvas-navigation {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .brand-region-inspect {
+    inset: 0;
+    width: auto;
+    height: auto;
+    border-color: transparent;
+    background: transparent;
+    color: transparent;
+    opacity: 1;
+  }
+
+  .brand-region-inspect:hover {
+    background: transparent;
+    color: transparent;
+  }
+
+  .brand-region-inspect svg {
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .brand-motion-orbit {
     animation: none;

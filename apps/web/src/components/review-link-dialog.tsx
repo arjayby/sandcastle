@@ -90,9 +90,14 @@ export default function ReviewLinkDialog({
 
   return (
     <>
-      <Button variant="outline" size="sm" onClick={() => setIsOpen(true)}>
+      <Button
+        variant="outline"
+        size="sm"
+        aria-label="Share Review Link"
+        onClick={() => setIsOpen(true)}
+      >
         <LinkIcon data-icon="inline-start" />
-        Share Review Link
+        <span className="hidden sm:inline">Share Review Link</span>
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>

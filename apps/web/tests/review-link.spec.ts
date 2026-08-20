@@ -49,7 +49,9 @@ test("a Brand Builder can share and revoke an accountless read only Review Link"
   const reviewUrl = await reviewLinkInput.inputValue();
 
   const reviewerContext = await browser.newContext({
+    hasTouch: true,
     permissions: ["clipboard-read", "clipboard-write"],
+    viewport: { width: 390, height: 844 },
   });
   const reviewerPage = await reviewerContext.newPage();
   await reviewerPage.goto(reviewUrl);
@@ -59,7 +61,7 @@ test("a Brand Builder can share and revoke an accountless read only Review Link"
       name: `${companyName} Brand System`,
     }),
   ).toBeVisible();
-  await expect(reviewerPage.getByText(description)).toBeVisible();
+  await expect(reviewerPage.getByText(description)).toContainText(description);
   await expect(
     reviewerPage.getByRole("application", { name: "Brand Canvas viewport" }),
   ).toBeVisible();
@@ -77,6 +79,11 @@ test("a Brand Builder can share and revoke an accountless read only Review Link"
       name: /rename|duplicate|delete|retry/i,
     }),
   ).toHaveCount(0);
+  await expect(
+    reviewerPage.getByRole("button", {
+      name: "Revise complete Brand System",
+    }),
+  ).toHaveCount(0);
 
   const zoomBefore = await reviewerPage.getByLabel("Canvas zoom").textContent();
   await reviewerPage.getByRole("button", { name: "Zoom in" }).click();
@@ -90,6 +97,20 @@ test("a Brand Builder can share and revoke an accountless read only Review Link"
   const inspector = reviewerPage.getByRole("complementary", {
     name: "Brand Region inspector",
   });
+  const reviewViewportBox = await reviewerPage
+    .getByRole("application", { name: "Brand Canvas viewport" })
+    .boundingBox();
+  const reviewInspectorBox = await inspector.boundingBox();
+  expect(reviewViewportBox).not.toBeNull();
+  expect(reviewInspectorBox).not.toBeNull();
+  if (reviewViewportBox && reviewInspectorBox) {
+    expect(reviewInspectorBox.width).toBeGreaterThan(
+      reviewViewportBox.width * 0.9,
+    );
+    expect(reviewInspectorBox.y).toBeGreaterThan(
+      reviewViewportBox.y + reviewViewportBox.height * 0.35,
+    );
+  }
   await inspector.getByRole("button", { name: "Focus Logo" }).click();
   await inspector.getByRole("button", { name: "Copy logo tagline" }).click();
   await expect
