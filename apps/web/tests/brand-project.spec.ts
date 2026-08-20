@@ -16,7 +16,9 @@ const REGION_NAMES = [
 
 test("a Brand Builder can create, authenticate, reopen, and persist an owned Brand Project", async ({
   page,
+  context,
 }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   const runId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const ownerEmail = `owner-${runId}@example.com`;
   const otherOwnerEmail = `other-${runId}@example.com`;
@@ -64,17 +66,29 @@ test("a Brand Builder can create, authenticate, reopen, and persist an owned Bra
   ).toBeVisible();
 
   await expect(page.getByText("Northstar signal")).toBeVisible();
-  const progressiveLogo = page.getByRole("button", {
+  const progressiveLogo = page.getByRole("region", {
     name: "Logo Brand Region",
   });
-  const progressiveColor = page.getByRole("button", {
+  const progressiveColor = page.getByRole("region", {
     name: "Color Brand Region",
   });
-  const progressiveTypography = page.getByRole("button", {
+  const progressiveTypography = page.getByRole("region", {
     name: "Typography Brand Region",
   });
-  const progressiveVoice = page.getByRole("button", {
+  const progressiveVoice = page.getByRole("region", {
     name: "Voice and Tone Brand Region",
+  });
+  const progressivePhotography = page.getByRole("region", {
+    name: "Photography Brand Region",
+  });
+  const progressiveMotion = page.getByRole("region", {
+    name: "Motion Brand Region",
+  });
+  const progressiveInterface = page.getByRole("region", {
+    name: "Interface Foundation Brand Region",
+  });
+  const progressiveTokens = page.getByRole("region", {
+    name: "Design Tokens Brand Region",
   });
 
   await expect(progressiveLogo.getByText("Generating")).toBeVisible();
@@ -86,10 +100,6 @@ test("a Brand Builder can create, authenticate, reopen, and persist an owned Bra
   await expect(progressiveTypography.getByText("Ready")).toBeVisible();
   await expect(progressiveVoice.getByText("Generating")).toBeVisible();
   await expect(progressiveVoice.getByText("Ready")).toBeVisible();
-
-  const progressivePhotography = page.getByRole("button", {
-    name: "Photography Brand Region",
-  });
   await expect(
     progressivePhotography.getByText("Generating", { exact: true }),
   ).toBeVisible();
@@ -119,18 +129,103 @@ test("a Brand Builder can create, authenticate, reopen, and persist an owned Bra
     }),
   ).toBeVisible();
   await expect(progressivePhotography.getByText("Ready")).toBeVisible();
+  await expect(progressiveMotion.getByText("Generating")).toBeVisible();
+  await expect(progressiveInterface.getByText("Unfinished")).toBeVisible();
+  await expect(progressiveMotion.getByText("Ready")).toBeVisible();
+  await expect(progressiveInterface.getByText("Generating")).toBeVisible();
+  await expect(progressiveInterface.getByText("Ready")).toBeVisible();
+  await expect(progressiveTokens.getByText("Generating")).toBeVisible();
+  await expect(progressiveTokens.getByText("Ready")).toBeVisible();
+
+  await expect(progressiveMotion.getByText("320ms")).toBeVisible();
+  await expect(
+    progressiveMotion.getByText("cubic-bezier(0.22, 1, 0.36, 1)"),
+  ).toBeVisible();
+  await expect(progressiveMotion.locator(".brand-motion-orbit")).toHaveCSS(
+    "animation-name",
+    "brand-motion-orbit",
+  );
+  await expect(
+    progressiveInterface.getByText("Find the clearest way forward."),
+  ).toBeVisible();
+  await expect(progressiveInterface.getByText("Email address")).toBeVisible();
+  await expect(
+    progressiveInterface.getByText("Approach", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    progressiveInterface.getByRole("button", { name: "Set your direction" }),
+  ).toBeVisible();
+  await expect(
+    progressiveInterface.getByRole("textbox", { name: "Email address" }),
+  ).toBeVisible();
+  await expect(
+    progressiveInterface.getByRole("article", { name: "Project rhythm" }),
+  ).toBeVisible();
+  await expect(progressiveInterface.getByRole("navigation")).toBeVisible();
+  const primaryExampleAction = progressiveInterface.getByRole("button", {
+    name: "Set your direction",
+  });
+  await expect(primaryExampleAction).toHaveCSS("transition-duration", "0.32s");
+  await expect(primaryExampleAction).toHaveCSS("border-radius", "8px");
+  await expect(primaryExampleAction).toHaveCSS(
+    "background-color",
+    "rgb(23, 35, 31)",
+  );
+  await expect(progressiveTokens.getByLabel("CSS design tokens")).toContainText(
+    "--color-primary: #EDB33F",
+  );
+  await expect(
+    progressiveTokens.getByLabel("JSON design tokens"),
+  ).toContainText('"spacing"');
+  for (const category of [
+    "--color-",
+    "--font-",
+    "--type-",
+    "--spacing-",
+    "--radius-",
+    "--shadow-",
+    "--motion-",
+  ]) {
+    await expect(
+      progressiveTokens.getByLabel("CSS design tokens"),
+    ).toContainText(category);
+  }
+  const tokenJson = await progressiveTokens
+    .getByLabel("JSON design tokens")
+    .textContent();
+  expect(() => JSON.parse(tokenJson ?? "")).not.toThrow();
+  await progressiveTokens
+    .getByRole("button", { name: "Inspect Design Tokens Brand Region" })
+    .click();
+  const tokenInspector = page.getByRole("complementary", {
+    name: "Brand Region inspector",
+  });
+  await tokenInspector.getByRole("button", { name: "Copy all CSS" }).click();
+  await expect
+    .poll(() => page.evaluate(() => navigator.clipboard.readText()))
+    .toContain("--color-primary: #EDB33F");
+  await tokenInspector.getByRole("button", { name: "Copy all JSON" }).click();
+  const copiedJson = await page.evaluate(() => navigator.clipboard.readText());
+  expect(() => JSON.parse(copiedJson)).not.toThrow();
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(progressiveMotion.locator(".brand-motion-orbit")).toHaveCSS(
+    "animation-name",
+    "none",
+  );
+  await page.emulateMedia({ reducedMotion: "no-preference" });
 
   for (const regionName of REGION_NAMES) {
     await expect(
-      page.getByRole("button", { name: `${regionName} Brand Region` }),
+      page.getByRole("region", { name: `${regionName} Brand Region` }),
     ).toBeVisible();
   }
 
   const viewport = page.getByRole("application", {
     name: "Brand Canvas viewport",
   });
-  const logo = page.getByRole("button", { name: "Logo Brand Region" });
-  const color = page.getByRole("button", { name: "Color Brand Region" });
+  const logo = page.getByRole("region", { name: "Logo Brand Region" });
+  const color = page.getByRole("region", { name: "Color Brand Region" });
   const initialLogoBox = await logo.boundingBox();
   const initialColorBox = await color.boundingBox();
   const viewportBox = await viewport.boundingBox();
@@ -223,7 +318,9 @@ test("a Brand Builder can create, authenticate, reopen, and persist an owned Bra
   }
 
   await page.getByRole("button", { name: "Fit Brand System" }).click();
-  await page.getByRole("button", { name: "Color Brand Region" }).click();
+  await page
+    .getByRole("button", { name: "Inspect Color Brand Region" })
+    .click();
   const inspector = page.getByRole("complementary", {
     name: "Brand Region inspector",
   });
@@ -255,10 +352,12 @@ test("a Brand Builder can create, authenticate, reopen, and persist an owned Bra
   }
 
   await page.getByRole("button", { name: "Fit Brand System" }).click();
-  const interfaceFoundation = page.getByRole("button", {
+  const interfaceFoundation = page.getByRole("region", {
     name: "Interface Foundation Brand Region",
   });
-  await interfaceFoundation.click();
+  await interfaceFoundation
+    .getByRole("button", { name: "Inspect Interface Foundation Brand Region" })
+    .click();
   await expect(
     inspector.getByRole("heading", { name: "Interface Foundation" }),
   ).toBeVisible();
@@ -302,7 +401,12 @@ test("a Brand Builder can create, authenticate, reopen, and persist an owned Bra
   await expect(page.getByText(description)).toBeVisible();
   await expect(
     page
-      .getByRole("button", { name: "Photography Brand Region" })
+      .getByRole("region", { name: "Design Tokens Brand Region" })
+      .getByText("Ready"),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "Photography Brand Region" })
       .getByRole("img"),
   ).toHaveCount(4);
 

@@ -1,9 +1,14 @@
 import {
   assertSafeBrandPhotograph,
+  colorGenerationSchema,
   createPhotographPrompt,
+  designTokensGenerationSchema,
+  interfaceGenerationSchema,
   logoGenerationSchema,
+  motionGenerationSchema,
   photographyDirectionSchema,
   sanitizeGeneratedSvg,
+  typographyGenerationSchema,
   validateTypographyWithGoogleFonts,
 } from "@sandcastle/backend/convex/brandGenerationContract";
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -141,6 +146,150 @@ describe("Google Fonts generation contract", () => {
     await expect(validateTypographyWithGoogleFonts(typography)).rejects.toThrow(
       "Newsreader weight 600",
     );
+  });
+
+  test("rejects type scale values that cannot become CSS tokens", () => {
+    expect(() =>
+      typographyGenerationSchema.parse({
+        ...typography,
+        scale: [
+          ...typography.scale.slice(0, 2),
+          { name: "Body", size: "banana", lineHeight: "soon", weight: 400 },
+        ],
+      }),
+    ).toThrow();
+  });
+});
+
+describe("applied Brand Region generation contract", () => {
+  test("accepts practical motion, interface, and design token results", () => {
+    expect(
+      motionGenerationSchema.parse({
+        summary: "Measured motion that confirms progress.",
+        rules: ["Movement arrives softly."],
+        principle: "Lift, travel, settle",
+        duration: "320ms",
+        easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+      }),
+    ).toBeDefined();
+
+    expect(
+      interfaceGenerationSchema.parse({
+        summary: "Calm surfaces with direct controls.",
+        rules: ["Reserve the accent color for primary actions."],
+        principle: "Editorial calm, product clarity",
+        components: ["Buttons", "Inputs", "Cards", "Navigation", "Website"],
+        example: {
+          brandName: "Northstar",
+          headline: "Find the clearest way forward.",
+          body: "Bring plans and progress into one calm view.",
+          callToAction: "Set your direction",
+          secondaryAction: "See the approach",
+          cardTitle: "Project rhythm",
+          cardDescription: "A calm weekly overview.",
+          inputLabel: "Email address",
+          inputPlaceholder: "you@example.com",
+          navigation: ["Approach", "Work", "About"],
+        },
+      }),
+    ).toBeDefined();
+
+    expect(
+      designTokensGenerationSchema.parse({
+        summary: "Production values for every application.",
+        rules: ["Use tokens as the interface source of truth."],
+        colors: {
+          ink: "#17231F",
+          primary: "#EDB33F",
+          support: "#B7CEB7",
+          accent: "#D57658",
+          surface: "#F4EFE5",
+        },
+        fonts: {
+          display: "Newsreader, Georgia, serif",
+          body: "Inter, Arial, sans-serif",
+        },
+        typeScale: { display: "72px", heading: "36px", body: "18px" },
+        spacing: { small: "8px", medium: "16px", large: "32px" },
+        radius: { control: "8px", card: "12px" },
+        shadows: {
+          card: "0 18px 50px rgba(23, 35, 31, 0.12)",
+        },
+        motion: {
+          duration: "320ms",
+          easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+        },
+      }),
+    ).toBeDefined();
+  });
+
+  test("rejects motion values that are not suitable CSS interface tokens", () => {
+    const motion = {
+      summary: "Motion without practical values.",
+      rules: ["Move quickly."],
+      principle: "Bounce forever",
+      duration: "320ms",
+      easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+    };
+
+    for (const invalidMotion of [
+      { ...motion, duration: "0ms" },
+      { ...motion, duration: "12s" },
+      { ...motion, duration: "eventually" },
+      { ...motion, easing: "cubic-bezier(1.5, 0, -0.2, 1)" },
+      { ...motion, easing: "springy" },
+    ]) {
+      expect(() => motionGenerationSchema.parse(invalidMotion)).toThrow();
+    }
+  });
+
+  test("rejects token values that could break generated CSS", () => {
+    const tokens = {
+      summary: "Unsafe tokens.",
+      rules: ["Keep values valid."],
+      colors: {
+        ink: "#17231F",
+        primary: "#EDB33F",
+        support: "#B7CEB7",
+        accent: "#D57658",
+        surface: "#F4EFE5",
+      },
+      fonts: { display: "Newsreader, Georgia, serif", body: "Inter, Arial" },
+      typeScale: { body: "18px" },
+      spacing: { medium: "16px" },
+      radius: { card: "12px" },
+      shadows: { card: "none" },
+      motion: {
+        duration: "320ms",
+        easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+      },
+    };
+
+    for (const invalidTokens of [
+      { ...tokens, fonts: { ...tokens.fonts, display: '"Newsreader' } },
+      { ...tokens, spacing: { medium: "banana" } },
+      { ...tokens, radius: { card: "12px; }" } },
+      { ...tokens, typeScale: { body: "large" } },
+      { ...tokens, shadows: { card: "0 2px )" } },
+    ]) {
+      expect(() => designTokensGenerationSchema.parse(invalidTokens)).toThrow();
+    }
+  });
+
+  test("requires the semantic color roles used by applied regions", () => {
+    expect(() =>
+      colorGenerationSchema.parse({
+        summary: "Motion without practical values.",
+        rules: ["Use color consistently."],
+        palette: ["One", "Two", "Three", "Four", "Five"].map((name) => ({
+          name,
+          value: "#17231F",
+          role: "Decoration",
+          usage: "Accents",
+          contrast: "pass" as const,
+        })),
+      }),
+    ).toThrow();
   });
 });
 

@@ -1,5 +1,7 @@
+import { Button } from "@sandcastle/ui/components/button";
 import { Spinner } from "@sandcastle/ui/components/spinner";
 import { cn } from "@sandcastle/ui/lib/utils";
+import { FocusIcon } from "lucide-react";
 import type { CSSProperties, MouseEvent } from "react";
 
 import type { BrandRegion } from "@/lib/brand-system";
@@ -248,7 +250,11 @@ function MotionRegion({
   return (
     <div className="flex h-full flex-col overflow-hidden bg-[var(--brand-aloe)]/45 p-7">
       <RegionLabel region={region} />
-      <div className="relative my-5 flex flex-1 items-center justify-center overflow-hidden rounded-[50%] bg-[var(--brand-ink)]">
+      <div
+        role="img"
+        aria-label={`${region.content.principle} live motion expression`}
+        className="relative my-5 flex flex-1 items-center justify-center overflow-hidden rounded-[50%] bg-[var(--brand-ink)]"
+      >
         <div className="brand-motion-orbit size-32 rounded-[42%_58%_55%_45%] bg-[var(--brand-saffron)]" />
         <div className="absolute size-5 rounded-full bg-[var(--brand-clay)]" />
       </div>
@@ -277,35 +283,69 @@ function InterfaceRegion({
 }) {
   return (
     <div className="grid h-full grid-cols-[0.68fr_1.32fr] bg-[var(--brand-paper)]">
-      <div className="flex flex-col justify-between bg-[var(--brand-saffron)] p-8 text-[var(--brand-ink)]">
-        <p className="font-semibold text-xs uppercase tracking-[0.16em]">
-          {region.content.example.brandName}
-        </p>
-        <p className="brand-display text-5xl leading-none">
-          {region.content.example.headline}
-        </p>
-        <span className="w-fit bg-[var(--brand-ink)] px-5 py-3 font-semibold text-[var(--brand-paper)] text-xs">
-          {region.content.example.callToAction}
-        </span>
+      <div className="flex flex-col gap-[var(--brand-spacing-medium)] bg-[var(--brand-saffron)] p-[var(--brand-spacing-large)] text-[var(--brand-ink)]">
+        <nav
+          aria-label={`${region.content.example.brandName} example navigation`}
+          className="flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.14em]"
+        >
+          <strong>{region.content.example.brandName}</strong>
+          <span className="flex gap-3">
+            {region.content.example.navigation.map((item) => (
+              <span key={item}>{item}</span>
+            ))}
+          </span>
+        </nav>
+        <div className="my-auto flex flex-col gap-[var(--brand-spacing-medium)]">
+          <p className="brand-display text-5xl leading-none">
+            {region.content.example.headline}
+          </p>
+          <p className="max-w-80 text-xs leading-relaxed">
+            {region.content.example.body}
+          </p>
+          <div className="flex gap-[var(--brand-spacing-small)]">
+            <button
+              type="button"
+              className="brand-interface-control rounded-[var(--brand-radius-control)] bg-[var(--brand-ink)] px-4 py-2 font-semibold text-[var(--brand-paper)] text-xs"
+            >
+              {region.content.example.callToAction}
+            </button>
+            <button
+              type="button"
+              className="brand-interface-control rounded-[var(--brand-radius-control)] border border-[var(--brand-ink)]/30 px-4 py-2 font-semibold text-xs"
+            >
+              {region.content.example.secondaryAction}
+            </button>
+          </div>
+        </div>
       </div>
       <div className="flex flex-col p-7">
         <RegionLabel region={region} />
         <div className="mt-auto grid grid-cols-2 gap-3">
-          <div className="border border-[var(--brand-ink)]/15 bg-white p-4">
+          <article
+            aria-label={region.content.example.cardTitle}
+            className="brand-interface-control rounded-[var(--brand-radius-card)] border border-[var(--brand-ink)]/15 bg-white p-4 shadow-[var(--brand-shadow-card)]"
+          >
             <p className="brand-display text-2xl text-[var(--brand-ink)]">
               {region.content.example.cardTitle}
             </p>
             <p className="mt-2 text-[var(--brand-muted)] text-xs">
               {region.content.example.cardDescription}
             </p>
-          </div>
+          </article>
           <div className="flex flex-col gap-2">
-            <div className="border border-[var(--brand-ink)]/25 bg-white px-3 py-2 text-[var(--brand-muted)] text-xs">
-              {region.content.example.inputPlaceholder}
-            </div>
-            <div className="bg-[var(--brand-ink)] px-3 py-2 text-center text-[var(--brand-paper)] text-xs">
-              {region.content.example.actionLabel}
-            </div>
+            <label
+              htmlFor="brand-example-email"
+              className="font-medium text-[10px] text-[var(--brand-ink)]"
+            >
+              {region.content.example.inputLabel}
+            </label>
+            <input
+              id="brand-example-email"
+              aria-label={region.content.example.inputLabel}
+              placeholder={region.content.example.inputPlaceholder}
+              readOnly
+              className="brand-interface-control rounded-[var(--brand-radius-control)] border border-[var(--brand-ink)]/25 bg-white px-3 py-2 font-normal text-[var(--brand-ink)] text-xs placeholder:text-[var(--brand-muted)]"
+            />
           </div>
         </div>
       </div>
@@ -319,8 +359,8 @@ function DesignTokensRegion({
   region: Extract<BrandRegion, { id: "design-tokens" }>;
 }) {
   return (
-    <div className="grid h-full grid-cols-[0.78fr_1.22fr] bg-[var(--brand-ink)] p-7 text-[var(--brand-paper)]">
-      <div className="flex flex-col justify-between border-white/15 border-r pr-6">
+    <div className="grid h-full grid-cols-[0.64fr_1.36fr] bg-[var(--brand-ink)] p-7 text-[var(--brand-paper)]">
+      <div className="flex flex-col justify-between border-white/15 border-r pr-5">
         <div>
           <p className="text-[10px] text-[var(--brand-aloe)] uppercase tracking-[0.18em]">
             Brand Region
@@ -331,9 +371,21 @@ function DesignTokensRegion({
           CSS · JSON · Ready for production
         </p>
       </div>
-      <pre className="overflow-hidden pl-7 font-mono text-[var(--brand-aloe)] text-xs leading-6">
-        <code>{region.content.css}</code>
-      </pre>
+      <div className="grid min-w-0 grid-cols-2 gap-4 overflow-hidden pl-5">
+        <section aria-label="CSS design tokens" className="overflow-hidden">
+          <pre className="font-mono text-[9px] text-[var(--brand-aloe)] leading-4">
+            <code>{region.content.css}</code>
+          </pre>
+        </section>
+        <section
+          aria-label="JSON design tokens"
+          className="overflow-hidden border-white/15 border-l pl-4"
+        >
+          <pre className="font-mono text-[9px] text-[var(--brand-aloe)] leading-4">
+            <code>{region.content.json}</code>
+          </pre>
+        </section>
+      </div>
     </div>
   );
 }
@@ -374,7 +426,7 @@ export default function BrandRegionCard({
 }: {
   region: BrandRegion;
   isSelected: boolean;
-  onSelect: (event: MouseEvent<HTMLButtonElement>) => void;
+  onSelect: (event: MouseEvent<HTMLElement>) => void;
 }) {
   const style: CSSProperties = {
     left: region.frame.x,
@@ -384,20 +436,27 @@ export default function BrandRegionCard({
   };
 
   return (
-    <button
-      type="button"
+    <section
       aria-label={`${region.name} Brand Region`}
-      aria-pressed={isSelected}
       data-canvas-region={region.id}
       className={cn(
-        "absolute overflow-hidden border-0 p-0 text-left shadow-[0_18px_50px_rgba(65,54,39,0.11)] outline-none transition-[box-shadow] focus-visible:ring-4 focus-visible:ring-[var(--brand-ink)]/50",
+        "group/region absolute overflow-hidden border-0 p-0 text-left shadow-[0_18px_50px_rgba(65,54,39,0.11)] outline-none transition-[box-shadow]",
         isSelected &&
           "shadow-[0_26px_70px_rgba(23,35,31,0.2)] ring-4 ring-[var(--brand-ink)]",
       )}
       style={style}
-      onClick={onSelect}
     >
+      <Button
+        variant="outline"
+        size="icon-sm"
+        aria-label={`Inspect ${region.name} Brand Region`}
+        aria-pressed={isSelected}
+        className="absolute top-2 right-2 z-10 opacity-0 focus:opacity-100 group-hover/region:opacity-100"
+        onClick={onSelect}
+      >
+        <FocusIcon />
+      </Button>
       <BrandRegionContent region={region} />
-    </button>
+    </section>
   );
 }

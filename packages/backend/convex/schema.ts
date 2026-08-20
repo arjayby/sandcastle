@@ -22,6 +22,9 @@ export default defineSchema({
     typographyJson: v.optional(v.string()),
     voiceJson: v.optional(v.string()),
     photographyDirectionJson: v.optional(v.string()),
+    motionJson: v.optional(v.string()),
+    interfaceJson: v.optional(v.string()),
+    designTokensJson: v.optional(v.string()),
   })
     .index("by_owner_and_updated_at", ["ownerId", "updatedAt"])
     .index("by_owner_and_draft", ["ownerId", "draftId"]),

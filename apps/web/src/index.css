@@ -67,9 +67,26 @@
   animation-iteration-count: infinite;
 }
 
+.brand-interface-control {
+  transition-duration: var(--brand-motion-duration, 320ms);
+  transition-property: transform, box-shadow, background-color;
+  transition-timing-function: var(
+    --brand-motion-easing,
+    cubic-bezier(0.22, 1, 0.36, 1)
+  );
+}
+
+.brand-interface-control:hover {
+  transform: translateY(-2px);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .brand-motion-orbit {
     animation: none;
     transform: translate3d(0, 0, 0);
+  }
+
+  .brand-interface-control {
+    transition: none;
   }
 }

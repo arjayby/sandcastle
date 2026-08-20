@@ -12,8 +12,14 @@ import {
   type ColorGeneration,
   colorGenerationSchema,
   createPhotographPrompt,
+  type DesignTokensGeneration,
+  designTokensGenerationSchema,
+  type InterfaceGeneration,
+  interfaceGenerationSchema,
   type LogoGeneration,
   logoGenerationSchema,
+  type MotionGeneration,
+  motionGenerationSchema,
   type PhotographRole,
   type PhotographShot,
   type PhotographyDirection,
@@ -37,6 +43,13 @@ export type DirectedGenerationContext = GenerationContext & {
   direction: BrandDirection;
 };
 
+export type AppliedGenerationContext = DirectedGenerationContext & {
+  color: ColorGeneration;
+  typography: TypographyGeneration;
+  voice: VoiceGeneration;
+  motion: MotionGeneration;
+};
+
 export type BrandGenerationProvider = {
   createDirection: (
     ctx: ActionCtx,
@@ -58,6 +71,18 @@ export type BrandGenerationProvider = {
     ctx: ActionCtx,
     context: DirectedGenerationContext,
   ) => Promise<VoiceGeneration>;
+  createMotion: (
+    ctx: ActionCtx,
+    context: DirectedGenerationContext,
+  ) => Promise<MotionGeneration>;
+  createInterface: (
+    ctx: ActionCtx,
+    context: AppliedGenerationContext,
+  ) => Promise<InterfaceGeneration>;
+  createDesignTokens: (
+    ctx: ActionCtx,
+    context: AppliedGenerationContext,
+  ) => Promise<DesignTokensGeneration>;
   createPhotographyDirection: (
     ctx: ActionCtx,
     context: DirectedGenerationContext,
@@ -71,6 +96,52 @@ export type BrandImageProvider = {
     shot: PhotographShot,
   ) => Promise<{ data: Uint8Array; mediaType: string }>;
 };
+
+function typeScaleTokenName(name: string, index: number) {
+  return (
+    name
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || `step-${index + 1}`
+  );
+}
+
+function enforceTokenDependencies(
+  context: AppliedGenerationContext,
+  candidate: unknown,
+) {
+  const generated = designTokensGenerationSchema.parse(candidate);
+  const colorForRole = (role: string) =>
+    context.color.palette.find(
+      (color) => color.role.trim().toLowerCase() === role,
+    )?.value;
+
+  return designTokensGenerationSchema.parse({
+    ...generated,
+    colors: {
+      ink: colorForRole("foundation"),
+      primary: colorForRole("primary"),
+      support: colorForRole("support"),
+      accent: colorForRole("accent"),
+      surface: colorForRole("surface"),
+    },
+    fonts: {
+      display: `"${context.typography.display}", ${context.typography.displayFallbacks.join(", ")}`,
+      body: `"${context.typography.body}", ${context.typography.bodyFallbacks.join(", ")}`,
+    },
+    typeScale: Object.fromEntries(
+      context.typography.scale.map((step, index) => [
+        typeScaleTokenName(step.name, index),
+        step.size,
+      ]),
+    ),
+    motion: {
+      duration: context.motion.duration,
+      easing: context.motion.easing,
+    },
+  });
+}
 
 const controlledPrimaryLockupSvg =
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 80"><title>Northstar signal mark</title><path fill="#17231F" d="M12 12h56v56H12zM88 24h136v12H88zM88 48h104v10H88z"/></svg>';
@@ -205,6 +276,69 @@ const controlledProvider: BrandGenerationProvider = {
       },
     });
   },
+  async createMotion() {
+    await controlledPause();
+    return motionGenerationSchema.parse({
+      summary: "Measured motion that settles gently and confirms progress.",
+      rules: [
+        "Movement begins decisively and arrives softly.",
+        "Use one coordinated expression instead of competing effects.",
+        "Reduced motion replaces travel with a static resting state.",
+      ],
+      principle: "Lift, travel, settle",
+      duration: "320ms",
+      easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+    });
+  },
+  async createInterface(_ctx, context) {
+    await controlledPause();
+    return interfaceGenerationSchema.parse({
+      summary: "Calm editorial surfaces with direct product controls.",
+      rules: [
+        "Reserve Signal Gold for the clearest next action.",
+        "Use generous spacing and fine Harbor Ink rules for hierarchy.",
+        "Apply the generated type, corner, shadow, and motion tokens.",
+      ],
+      principle: "Editorial calm, product clarity",
+      components: ["Buttons", "Inputs", "Cards", "Navigation", "Website"],
+      example: {
+        brandName: context.companyName,
+        headline: context.voice.headline,
+        body: context.voice.body,
+        callToAction: context.voice.callToAction,
+        secondaryAction: "See the approach",
+        cardTitle: "Project rhythm",
+        cardDescription: "A calm weekly overview for the work ahead.",
+        inputLabel: "Email address",
+        inputPlaceholder: "you@example.com",
+        navigation: ["Approach", "Work", "About"],
+      },
+    });
+  },
+  async createDesignTokens(_ctx, context) {
+    await controlledPause();
+    return enforceTokenDependencies(context, {
+      summary: "Production values that keep every application coherent.",
+      rules: [
+        "Treat tokens as the source of truth for interface values.",
+        "Use the spacing scale before introducing a new measurement.",
+        "Motion values inherit the reduced motion policy.",
+      ],
+      colors: {
+        ink: "#17231F",
+        primary: "#EDB33F",
+        support: "#B7CEB7",
+        accent: "#D57658",
+        surface: "#F4EFE5",
+      },
+      fonts: { display: "Generated display", body: "Generated body" },
+      typeScale: { generated: "16px" },
+      spacing: { small: "8px", medium: "16px", large: "32px" },
+      radius: { control: "8px", card: "12px" },
+      shadows: { card: "0 18px 50px rgba(23, 35, 31, 0.12)" },
+      motion: { duration: "320ms", easing: "cubic-bezier(0, 0, 1, 1)" },
+    });
+  },
   async createPhotographyDirection() {
     await controlledPause();
     return photographyDirectionSchema.parse({
@@ -275,7 +409,10 @@ const liveProvider: BrandGenerationProvider = {
     const result = await brandAgent.generateObject(
       ctx,
       { userId: context.ownerId },
-      { schema: colorGenerationSchema, prompt: regionPrompt("color", context) },
+      {
+        schema: colorGenerationSchema,
+        prompt: `${regionPrompt("color", context)} Return at least one palette entry for each exact semantic role: Foundation, Primary, Support, Accent, and Surface.`,
+      },
     );
     return colorGenerationSchema.parse(result.object);
   },
@@ -300,6 +437,39 @@ const liveProvider: BrandGenerationProvider = {
       },
     );
     return voiceGenerationSchema.parse(result.object);
+  },
+  async createMotion(ctx, context) {
+    const result = await brandAgent.generateObject(
+      ctx,
+      { userId: context.ownerId },
+      {
+        schema: motionGenerationSchema,
+        prompt: `${regionPrompt("motion", context)} Return one live motion principle with a practical CSS duration and cubic-bezier easing for product interfaces.`,
+      },
+    );
+    return motionGenerationSchema.parse(result.object);
+  },
+  async createInterface(ctx, context) {
+    const result = await brandAgent.generateObject(
+      ctx,
+      { userId: context.ownerId },
+      {
+        schema: interfaceGenerationSchema,
+        prompt: `${regionPrompt("interface foundation", context)} Create branded buttons, inputs, cards, navigation, and a small website example. Apply these generated dependencies: ${JSON.stringify({ color: context.color, typography: context.typography, voice: context.voice, motion: context.motion })}`,
+      },
+    );
+    return interfaceGenerationSchema.parse(result.object);
+  },
+  async createDesignTokens(ctx, context) {
+    const result = await brandAgent.generateObject(
+      ctx,
+      { userId: context.ownerId },
+      {
+        schema: designTokensGenerationSchema,
+        prompt: `${regionPrompt("design tokens", context)} Create production usable token values for colors, fonts, type scale, spacing, corner radius, shadows, and motion. Token names must be lowercase kebab case. Preserve these generated dependencies exactly where applicable: ${JSON.stringify({ color: context.color, typography: context.typography, motion: context.motion })}`,
+      },
+    );
+    return enforceTokenDependencies(context, result.object);
   },
   async createPhotographyDirection(ctx, context) {
     const result = await brandAgent.generateObject(

@@ -64,6 +64,9 @@ function BrandProjectPage() {
         voiceJson: project.voiceJson,
         photographyDirectionJson: project.photographyDirectionJson,
         photographs: project.photographs,
+        motionJson: project.motionJson,
+        interfaceJson: project.interfaceJson,
+        designTokensJson: project.designTokensJson,
       }}
       onSignOut={() => authClient.signOut()}
     />

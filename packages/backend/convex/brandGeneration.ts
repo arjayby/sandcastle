@@ -11,7 +11,10 @@ import {
 import {
   brandDirectionSchema,
   colorGenerationSchema,
+  designTokensGenerationSchema,
+  interfaceGenerationSchema,
   logoGenerationSchema,
+  motionGenerationSchema,
   type ProgressiveRegionId,
   photographRoles,
   photographyDirectionSchema,
@@ -32,6 +35,9 @@ const regionValidator = v.union(
   v.literal("color"),
   v.literal("typography"),
   v.literal("voice-and-tone"),
+  v.literal("motion"),
+  v.literal("interface-foundation"),
+  v.literal("design-tokens"),
 );
 
 const generationContextValidator = v.object({
@@ -50,6 +56,17 @@ const photographGenerationContextValidator = v.object({
   photographyDirectionJson: v.string(),
 });
 
+const appliedGenerationContextValidator = v.object({
+  projectId: v.id("brandProjects"),
+  ownerId: v.string(),
+  companyName: v.string(),
+  description: v.string(),
+  directionJson: v.string(),
+  colorJson: v.string(),
+  typographyJson: v.string(),
+  voiceJson: v.string(),
+});
+
 function schemaForRegion(region: ProgressiveRegionId) {
   switch (region) {
     case "logo":
@@ -60,6 +77,12 @@ function schemaForRegion(region: ProgressiveRegionId) {
       return typographyGenerationSchema;
     case "voice-and-tone":
       return voiceGenerationSchema;
+    case "motion":
+      return motionGenerationSchema;
+    case "interface-foundation":
+      return interfaceGenerationSchema;
+    case "design-tokens":
+      return designTokensGenerationSchema;
   }
 }
 
@@ -104,11 +127,22 @@ export const saveRegion = internalMutation({
   returns: v.null(),
   handler: async (ctx, { projectId, region, resultJson, nextStage }) => {
     schemaForRegion(region).parse(JSON.parse(resultJson));
-    const field = `${region === "voice-and-tone" ? "voice" : region}Json` as
+    const field = `${
+      region === "voice-and-tone"
+        ? "voice"
+        : region === "interface-foundation"
+          ? "interface"
+          : region === "design-tokens"
+            ? "designTokens"
+            : region
+    }Json` as
       | "logoJson"
       | "colorJson"
       | "typographyJson"
-      | "voiceJson";
+      | "voiceJson"
+      | "motionJson"
+      | "interfaceJson"
+      | "designTokensJson";
     await ctx.db.patch(projectId, {
       [field]: resultJson,
       generationStage: nextStage,
@@ -201,6 +235,34 @@ export const getPhotographGenerationContext = internalQuery({
   },
 });
 
+export const getAppliedGenerationContext = internalQuery({
+  args: { projectId: v.id("brandProjects"), ownerId: v.string() },
+  returns: v.union(appliedGenerationContextValidator, v.null()),
+  handler: async (ctx, { projectId, ownerId }) => {
+    const project = await ctx.db.get(projectId);
+    if (
+      !project ||
+      project.ownerId !== ownerId ||
+      !project.directionJson ||
+      !project.colorJson ||
+      !project.typographyJson ||
+      !project.voiceJson
+    ) {
+      return null;
+    }
+    return {
+      projectId,
+      ownerId,
+      companyName: project.companyName,
+      description: project.description,
+      directionJson: project.directionJson,
+      colorJson: project.colorJson,
+      typographyJson: project.typographyJson,
+      voiceJson: project.voiceJson,
+    };
+  },
+});
+
 async function finishPhotographyIfComplete(
   ctx: MutationCtx,
   projectId: Id<"brandProjects">,
@@ -213,10 +275,19 @@ async function finishPhotographyIfComplete(
     photographs.length === photographRoles.length &&
     photographs.every((photograph) => photograph.state !== "generating")
   ) {
+    const project = await ctx.db.get(projectId);
+    if (project?.generationStage !== "photography") {
+      return;
+    }
     await ctx.db.patch(projectId, {
-      generationStage: "ready",
+      generationStage: "motion",
       updatedAt: Date.now(),
     });
+    await ctx.scheduler.runAfter(
+      0,
+      internal.brandGeneration.generateAppliedRegions,
+      { projectId, ownerId: project.ownerId },
+    );
   }
 }
 
@@ -348,6 +419,86 @@ export const markFailed = internalMutation({
       generationError: error,
       updatedAt: Date.now(),
     });
+    return null;
+  },
+});
+
+export const generateAppliedRegions = internalAction({
+  args: {
+    projectId: v.id("brandProjects"),
+    ownerId: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, { projectId, ownerId }) => {
+    const context = await ctx.runQuery(
+      internal.brandGeneration.getAppliedGenerationContext,
+      { projectId, ownerId },
+    );
+    if (!context) {
+      throw new ConvexError("Brand Project not found");
+    }
+
+    const provider = getBrandGenerationProvider();
+
+    try {
+      const directedContext = {
+        projectId,
+        ownerId,
+        companyName: context.companyName,
+        description: context.description,
+        direction: brandDirectionSchema.parse(
+          JSON.parse(context.directionJson),
+        ),
+      };
+      const color = colorGenerationSchema.parse(JSON.parse(context.colorJson));
+      const typography = typographyGenerationSchema.parse(
+        JSON.parse(context.typographyJson),
+      );
+      const voice = voiceGenerationSchema.parse(JSON.parse(context.voiceJson));
+      const motion = motionGenerationSchema.parse(
+        await provider.createMotion(ctx, directedContext),
+      );
+      await ctx.runMutation(internal.brandGeneration.saveRegion, {
+        projectId,
+        region: "motion",
+        resultJson: JSON.stringify(motion),
+        nextStage: "interface-foundation",
+      });
+
+      const appliedContext = {
+        ...directedContext,
+        color,
+        typography,
+        voice,
+        motion,
+      };
+      const interfaceFoundation = interfaceGenerationSchema.parse(
+        await provider.createInterface(ctx, appliedContext),
+      );
+      await ctx.runMutation(internal.brandGeneration.saveRegion, {
+        projectId,
+        region: "interface-foundation",
+        resultJson: JSON.stringify(interfaceFoundation),
+        nextStage: "design-tokens",
+      });
+
+      const designTokens = designTokensGenerationSchema.parse(
+        await provider.createDesignTokens(ctx, appliedContext),
+      );
+      await ctx.runMutation(internal.brandGeneration.saveRegion, {
+        projectId,
+        region: "design-tokens",
+        resultJson: JSON.stringify(designTokens),
+        nextStage: "ready",
+      });
+    } catch (error) {
+      await ctx.runMutation(internal.brandGeneration.markFailed, {
+        projectId,
+        error:
+          error instanceof Error ? error.message : "Brand generation failed",
+      });
+    }
+
     return null;
   },
 });

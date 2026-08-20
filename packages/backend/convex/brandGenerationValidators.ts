@@ -8,6 +8,9 @@ export const generationStageValidator = v.union(
   v.literal("voice-and-tone"),
   v.literal("photography-direction"),
   v.literal("photography"),
+  v.literal("motion"),
+  v.literal("interface-foundation"),
+  v.literal("design-tokens"),
   v.literal("ready"),
   v.literal("failed"),
 );
