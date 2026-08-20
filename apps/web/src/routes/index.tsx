@@ -1,50 +1,93 @@
-import { api } from "@sandcastle/backend/convex/_generated/api";
-import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "convex/react";
+import { Button } from "@sandcastle/ui/components/button";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardFooter,
+	CardHeader,
+	CardTitle,
+} from "@sandcastle/ui/components/card";
+import {
+	Field,
+	FieldDescription,
+	FieldGroup,
+	FieldLabel,
+} from "@sandcastle/ui/components/field";
+import { Input } from "@sandcastle/ui/components/input";
+import { Textarea } from "@sandcastle/ui/components/textarea";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+
+import BrandCanvas from "@/components/brand-canvas";
+import { saveBrandBriefDraft } from "@/lib/brand-brief-draft";
 
 export const Route = createFileRoute("/")({
-  component: HomeComponent,
+	component: HomeComponent,
 });
 
-const TITLE_TEXT = `
- ██████╗ ███████╗████████╗████████╗███████╗██████╗
- ██╔══██╗██╔════╝╚══██╔══╝╚══██╔══╝██╔════╝██╔══██╗
- ██████╔╝█████╗     ██║      ██║   █████╗  ██████╔╝
- ██╔══██╗██╔══╝     ██║      ██║   ██╔══╝  ██╔══██╗
- ██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║
- ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝
-
- ████████╗    ███████╗████████╗ █████╗  ██████╗██╗  ██╗
- ╚══██╔══╝    ██╔════╝╚══██╔══╝██╔══██╗██╔════╝██║ ██╔╝
-    ██║       ███████╗   ██║   ███████║██║     █████╔╝
-    ██║       ╚════██║   ██║   ██╔══██║██║     ██╔═██╗
-    ██║       ███████║   ██║   ██║  ██║╚██████╗██║  ██╗
-    ╚═╝       ╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
- `;
+const DESCRIPTION_GUIDANCE =
+	"Tell us what your company does, who it serves, and what makes it different. You can also include the feeling you want, preferred colors, visual references, competitors, and anything the brand should avoid.";
 
 function HomeComponent() {
-  const healthCheck = useQuery(api.healthCheck.get);
+	const navigate = useNavigate();
+	const [companyName, setCompanyName] = useState("");
+	const [description, setDescription] = useState("");
 
-  return (
-    <div className="container mx-auto max-w-3xl px-4 py-2">
-      <pre className="overflow-x-auto font-mono text-sm">{TITLE_TEXT}</pre>
-      <div className="grid gap-6">
-        <section className="rounded-lg border p-4">
-          <h2 className="mb-2 font-medium">API Status</h2>
-          <div className="flex items-center gap-2">
-            <div
-              className={`h-2 w-2 rounded-full ${healthCheck === "OK" ? "bg-green-500" : healthCheck === undefined ? "bg-orange-400" : "bg-red-500"}`}
-            />
-            <span className="text-sm text-muted-foreground">
-              {healthCheck === undefined
-                ? "Checking..."
-                : healthCheck === "OK"
-                  ? "Connected"
-                  : "Error"}
-            </span>
-          </div>
-        </section>
-      </div>
-    </div>
-  );
+	return (
+		<BrandCanvas>
+			<Card className="m-auto w-full max-w-2xl">
+				<CardHeader>
+					<CardTitle>
+						<h1>Start with your Brand Brief</h1>
+					</CardTitle>
+					<CardDescription>
+						Describe the company now. You will only need to sign in when you are
+						ready to generate.
+					</CardDescription>
+				</CardHeader>
+				<form
+					onSubmit={(event) => {
+						event.preventDefault();
+						saveBrandBriefDraft(companyName, description);
+						navigate({ to: "/projects/new" });
+					}}
+				>
+					<CardContent>
+						<FieldGroup>
+							<Field>
+								<FieldLabel htmlFor="company-name">Company name</FieldLabel>
+								<Input
+									id="company-name"
+									name="companyName"
+									autoComplete="organization"
+									required
+									value={companyName}
+									onChange={(event) => setCompanyName(event.target.value)}
+								/>
+							</Field>
+							<Field>
+								<FieldLabel htmlFor="description">Description</FieldLabel>
+								<Textarea
+									id="description"
+									name="description"
+									placeholder={DESCRIPTION_GUIDANCE}
+									required
+									rows={7}
+									value={description}
+									onChange={(event) => setDescription(event.target.value)}
+								/>
+								<FieldDescription>
+									Company name and description are the only required details.
+									The Brand Agent infers anything you leave out.
+								</FieldDescription>
+							</Field>
+						</FieldGroup>
+					</CardContent>
+					<CardFooter className="mt-4 justify-end">
+						<Button type="submit">Generate</Button>
+					</CardFooter>
+				</form>
+			</Card>
+		</BrandCanvas>
+	);
 }

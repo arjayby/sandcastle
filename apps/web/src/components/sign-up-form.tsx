@@ -1,153 +1,96 @@
 import { Button } from "@sandcastle/ui/components/button";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardFooter,
+	CardHeader,
+	CardTitle,
+} from "@sandcastle/ui/components/card";
+import { Field, FieldGroup, FieldLabel } from "@sandcastle/ui/components/field";
 import { Input } from "@sandcastle/ui/components/input";
-import { Label } from "@sandcastle/ui/components/label";
-import { useForm } from "@tanstack/react-form";
-import { useNavigate } from "@tanstack/react-router";
+import { Spinner } from "@sandcastle/ui/components/spinner";
+import { useState } from "react";
 import { toast } from "sonner";
-import z from "zod";
 
+import CredentialsFields from "@/components/credentials-fields";
 import { authClient } from "@/lib/auth-client";
 
-export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () => void }) {
-  const navigate = useNavigate({
-    from: "/",
-  });
+export default function SignUpForm({
+	onSwitchToSignIn,
+	hasBrandBrief,
+}: {
+	onSwitchToSignIn: () => void;
+	hasBrandBrief: boolean;
+}) {
+	const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm({
-    defaultValues: {
-      email: "",
-      password: "",
-      name: "",
-    },
-    onSubmit: async ({ value }) => {
-      await authClient.signUp.email(
-        {
-          email: value.email,
-          password: value.password,
-          name: value.name,
-        },
-        {
-          onSuccess: () => {
-            navigate({
-              to: "/dashboard",
-            });
-            toast.success("Sign up successful");
-          },
-          onError: (error) => {
-            toast.error(error.error.message || error.error.statusText);
-          },
-        },
-      );
-    },
-    validators: {
-      onSubmit: z.object({
-        name: z.string().min(2, "Name must be at least 2 characters"),
-        email: z.email("Invalid email address"),
-        password: z.string().min(8, "Password must be at least 8 characters"),
-      }),
-    },
-  });
-
-  return (
-    <div className="mx-auto w-full mt-10 max-w-md p-6">
-      <h1 className="mb-6 text-center text-3xl font-bold">Create Account</h1>
-
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          form.handleSubmit();
-        }}
-        className="space-y-4"
-      >
-        <div>
-          <form.Field name="name">
-            {(field) => (
-              <div className="space-y-2">
-                <Label htmlFor={field.name}>Name</Label>
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                />
-                {field.state.meta.errors.map((error, index) => (
-                  <p key={`${field.name}-error-${index}`} className="text-red-500">
-                    {error?.message}
-                  </p>
-                ))}
-              </div>
-            )}
-          </form.Field>
-        </div>
-
-        <div>
-          <form.Field name="email">
-            {(field) => (
-              <div className="space-y-2">
-                <Label htmlFor={field.name}>Email</Label>
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  type="email"
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                />
-                {field.state.meta.errors.map((error, index) => (
-                  <p key={`${field.name}-error-${index}`} className="text-red-500">
-                    {error?.message}
-                  </p>
-                ))}
-              </div>
-            )}
-          </form.Field>
-        </div>
-
-        <div>
-          <form.Field name="password">
-            {(field) => (
-              <div className="space-y-2">
-                <Label htmlFor={field.name}>Password</Label>
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  type="password"
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                />
-                {field.state.meta.errors.map((error, index) => (
-                  <p key={`${field.name}-error-${index}`} className="text-red-500">
-                    {error?.message}
-                  </p>
-                ))}
-              </div>
-            )}
-          </form.Field>
-        </div>
-
-        <form.Subscribe
-          selector={(state) => ({ canSubmit: state.canSubmit, isSubmitting: state.isSubmitting })}
-        >
-          {({ canSubmit, isSubmitting }) => (
-            <Button type="submit" className="w-full" disabled={!canSubmit || isSubmitting}>
-              {isSubmitting ? "Submitting..." : "Sign Up"}
-            </Button>
-          )}
-        </form.Subscribe>
-      </form>
-
-      <div className="mt-4 text-center">
-        <Button
-          variant="link"
-          onClick={onSwitchToSignIn}
-          className="text-indigo-600 hover:text-indigo-800"
-        >
-          Already have an account? Sign In
-        </Button>
-      </div>
-    </div>
-  );
+	return (
+		<Card className="mx-auto mt-10 w-full max-w-md">
+			<CardHeader>
+				<CardTitle>
+					<h1>Create your account</h1>
+				</CardTitle>
+				<CardDescription>
+					{hasBrandBrief
+						? "Your Brand Brief is ready and will be saved after sign up."
+						: "Create an account to continue to your Brand Projects."}
+				</CardDescription>
+			</CardHeader>
+			<form
+				onSubmit={async (event) => {
+					event.preventDefault();
+					const formData = new FormData(event.currentTarget);
+					setIsSubmitting(true);
+					try {
+						await authClient.signUp.email(
+							{
+								name: String(formData.get("name")),
+								email: String(formData.get("email")),
+								password: String(formData.get("password")),
+							},
+							{
+								onSuccess: () => {
+									toast.success("Sign up successful");
+								},
+								onError: (error) => {
+									toast.error(error.error.message || error.error.statusText);
+								},
+							},
+						);
+					} finally {
+						setIsSubmitting(false);
+					}
+				}}
+			>
+				<CardContent>
+					<FieldGroup>
+						<Field>
+							<FieldLabel htmlFor="sign-up-name">Name</FieldLabel>
+							<Input
+								id="sign-up-name"
+								name="name"
+								autoComplete="name"
+								minLength={2}
+								required
+							/>
+						</Field>
+						<CredentialsFields
+							idPrefix="sign-up"
+							passwordAutoComplete="new-password"
+						/>
+					</FieldGroup>
+				</CardContent>
+				<CardFooter className="mt-4 flex flex-col gap-2">
+					<Button type="submit" className="w-full" disabled={isSubmitting}>
+						{isSubmitting ? <Spinner data-icon="inline-start" /> : null}
+						Sign Up
+					</Button>
+					<Button type="button" variant="link" onClick={onSwitchToSignIn}>
+						Already have an account? Sign in
+					</Button>
+				</CardFooter>
+			</form>
+		</Card>
+	);
 }

@@ -32,7 +32,13 @@ pnpm run dev:setup
 
 Follow the prompts to create a new Convex project and connect it to your application.
 
-Copy environment variables from `packages/backend/.env.local` to `apps/*/.env`.
+Create `apps/web/.env` from `apps/web/.env.example`, then copy the values from
+`packages/backend/.env.local` using this mapping:
+
+```text
+CONVEX_URL -> VITE_CONVEX_URL
+CONVEX_SITE_URL -> VITE_CONVEX_SITE_URL
+```
 
 Then, run the development server:
 
@@ -73,6 +79,16 @@ If you want to add app-specific blocks instead of shared primitives, run the sha
 
 - Initialize hooks: `pnpm run prepare`
 - Run checks: `pnpm run check`
+
+## Browser Tests
+
+The browser test verifies real authentication and Convex persistence. Complete the Convex setup above before running it, and configure the deployment with `SITE_URL=http://localhost:3001` so Better Auth trusts the Playwright origin.
+
+Run the complete suite from the repository root:
+
+```bash
+pnpm test
+```
 
 ## Project Structure
 
