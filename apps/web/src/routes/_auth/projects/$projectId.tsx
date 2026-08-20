@@ -1,6 +1,6 @@
 import { api } from "@sandcastle/backend/convex/_generated/api";
 import type { Id } from "@sandcastle/backend/convex/_generated/dataModel";
-import { Button } from "@sandcastle/ui/components/button";
+import { Button, buttonVariants } from "@sandcastle/ui/components/button";
 import {
 	Card,
 	CardContent,
@@ -61,13 +61,12 @@ function BrandProjectPage() {
 		<BrandCanvas>
 			<div className="m-auto flex w-full max-w-4xl flex-col gap-4">
 				<div className="flex items-center justify-between gap-4">
-					<Button
-						variant="outline"
-						nativeButton={false}
-						render={<Link to="/dashboard" />}
+					<Link
+						to="/dashboard"
+						className={buttonVariants({ variant: "outline" })}
 					>
 						All Brand Projects
-					</Button>
+					</Link>
 					<Button variant="ghost" onClick={() => authClient.signOut()}>
 						Sign out
 					</Button>
@@ -75,7 +74,7 @@ function BrandProjectPage() {
 				<Card>
 					<CardHeader>
 						<CardTitle>
-							<h1>{project.companyName}</h1>
+							<h1>{project.name ?? project.companyName}</h1>
 						</CardTitle>
 						<CardDescription>Brand Brief</CardDescription>
 					</CardHeader>

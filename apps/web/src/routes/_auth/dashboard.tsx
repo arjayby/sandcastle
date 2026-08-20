@@ -1,13 +1,5 @@
 import { api } from "@sandcastle/backend/convex/_generated/api";
-import type { Doc } from "@sandcastle/backend/convex/_generated/dataModel";
-import { Button } from "@sandcastle/ui/components/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@sandcastle/ui/components/card";
+import { Button, buttonVariants } from "@sandcastle/ui/components/button";
 import {
 	Empty,
 	EmptyContent,
@@ -17,19 +9,26 @@ import {
 } from "@sandcastle/ui/components/empty";
 import { Skeleton } from "@sandcastle/ui/components/skeleton";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "convex/react";
+import { usePaginatedQuery } from "convex/react";
 
+import BrandProjectCard from "@/components/brand-project-card";
 import UserMenu from "@/components/user-menu";
 
 export const Route = createFileRoute("/_auth/dashboard")({
 	component: DashboardContent,
+	errorComponent: DashboardError,
 });
 
 function DashboardContent() {
-	const projects = useQuery(api.brandProjects.list);
+	const {
+		results: projects,
+		status,
+		loadMore,
+	} = usePaginatedQuery(api.brandProjects.list, {}, { initialNumItems: 24 });
+	const isLoadingProjects = status === "LoadingFirstPage";
 
 	return (
-		<main className="p-6 md:p-12">
+		<main className="overflow-auto p-6 md:p-12">
 			<div className="mx-auto flex max-w-5xl flex-col gap-6">
 				<div className="flex items-center justify-between gap-4">
 					<div>
@@ -38,13 +37,19 @@ function DashboardContent() {
 							Reopen a Brand Project or begin another brief.
 						</p>
 					</div>
-					<UserMenu />
+					<div className="flex items-center gap-2">
+						<Link to="/" className={buttonVariants()}>
+							Create Brand Project
+						</Link>
+						<UserMenu />
+					</div>
 				</div>
 
-				{projects === undefined ? (
-					<div className="grid gap-4 md:grid-cols-2">
-						<Skeleton className="h-36" />
-						<Skeleton className="h-36" />
+				{isLoadingProjects ? (
+					<div className="grid gap-4 md:grid-cols-2" role="status">
+						<span className="sr-only">Loading Brand Projects</span>
+						<Skeleton className="h-64" />
+						<Skeleton className="h-64" />
 					</div>
 				) : projects.length === 0 ? (
 					<Empty>
@@ -54,38 +59,45 @@ function DashboardContent() {
 								Start with a short Brand Brief.
 							</EmptyDescription>
 						</EmptyHeader>
-						<EmptyContent>
-							<Button nativeButton={false} render={<Link to="/" />}>
-								Create a Brand Project
-							</Button>
-						</EmptyContent>
+						<EmptyContent>Use Create Brand Project to begin.</EmptyContent>
 					</Empty>
 				) : (
 					<div className="grid gap-4 md:grid-cols-2">
-						{projects.map((project: Doc<"brandProjects">) => (
-							<Card key={project._id}>
-								<CardHeader>
-									<CardTitle>
-										<Link
-											to="/projects/$projectId"
-											params={{ projectId: project._id }}
-											className="underline-offset-4 hover:underline"
-										>
-											{project.companyName}
-										</Link>
-									</CardTitle>
-									<CardDescription>
-										Updated {new Date(project.updatedAt).toLocaleDateString()}
-									</CardDescription>
-								</CardHeader>
-								<CardContent>
-									<p>{project.description}</p>
-								</CardContent>
-							</Card>
+						{projects.map((project) => (
+							<BrandProjectCard key={project._id} project={project} />
 						))}
 					</div>
 				)}
+
+				{status === "CanLoadMore" || status === "LoadingMore" ? (
+					<Button
+						className="self-center"
+						variant="outline"
+						disabled={status === "LoadingMore"}
+						onClick={() => loadMore(24)}
+					>
+						{status === "LoadingMore" ? "Loading more..." : "Load more"}
+					</Button>
+				) : null}
 			</div>
+		</main>
+	);
+}
+
+function DashboardError() {
+	return (
+		<main className="p-6 md:p-12">
+			<Empty className="mx-auto max-w-xl">
+				<EmptyHeader>
+					<EmptyTitle>Brand Projects could not be loaded</EmptyTitle>
+					<EmptyDescription>
+						Check your connection, then try loading your Brand Projects again.
+					</EmptyDescription>
+				</EmptyHeader>
+				<EmptyContent>
+					<Button onClick={() => window.location.reload()}>Try again</Button>
+				</EmptyContent>
+			</Empty>
 		</main>
 	);
 }

@@ -5,10 +5,11 @@ export default defineSchema({
 	brandProjects: defineTable({
 		ownerId: v.string(),
 		draftId: v.string(),
+		name: v.optional(v.string()),
 		companyName: v.string(),
 		description: v.string(),
 		updatedAt: v.number(),
 	})
-		.index("by_owner", ["ownerId"])
+		.index("by_owner_and_updated_at", ["ownerId", "updatedAt"])
 		.index("by_owner_and_draft", ["ownerId", "draftId"]),
 });
