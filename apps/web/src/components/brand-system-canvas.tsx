@@ -341,7 +341,7 @@ export default function BrandSystemCanvas({
 
   function selectRegion(
     region: BrandRegion,
-    event: React.MouseEvent<HTMLButtonElement>,
+    event: React.MouseEvent<HTMLElement>,
   ) {
     if (didPanRef.current) {
       didPanRef.current = false;

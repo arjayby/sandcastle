@@ -1,4 +1,5 @@
 import {
+  colorGenerationSchema,
   designTokensGenerationSchema,
   interfaceGenerationSchema,
   logoGenerationSchema,
@@ -207,13 +208,62 @@ describe("applied Brand Region generation contract", () => {
   });
 
   test("rejects motion values that are not suitable CSS interface tokens", () => {
+    const motion = {
+      summary: "Motion without practical values.",
+      rules: ["Move quickly."],
+      principle: "Bounce forever",
+      duration: "320ms",
+      easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+    };
+
+    for (const invalidMotion of [
+      { ...motion, duration: "0ms" },
+      { ...motion, duration: "12s" },
+      { ...motion, duration: "eventually" },
+      { ...motion, easing: "cubic-bezier(1.5, 0, -0.2, 1)" },
+      { ...motion, easing: "springy" },
+    ]) {
+      expect(() => motionGenerationSchema.parse(invalidMotion)).toThrow();
+    }
+  });
+
+  test("rejects token values that could break generated CSS", () => {
     expect(() =>
-      motionGenerationSchema.parse({
+      designTokensGenerationSchema.parse({
+        summary: "Unsafe tokens.",
+        rules: ["Keep values valid."],
+        colors: {
+          ink: "#17231F",
+          primary: "#EDB33F",
+          support: "#B7CEB7",
+          accent: "#D57658",
+          surface: "#F4EFE5",
+        },
+        fonts: { display: "Newsreader; }", body: "Inter" },
+        typeScale: { body: "18px" },
+        spacing: { medium: "16px" },
+        radius: { card: "12px" },
+        shadows: { card: "none" },
+        motion: {
+          duration: "320ms",
+          easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+        },
+      }),
+    ).toThrow();
+  });
+
+  test("requires the semantic color roles used by applied regions", () => {
+    expect(() =>
+      colorGenerationSchema.parse({
         summary: "Motion without practical values.",
-        rules: ["Move quickly."],
-        principle: "Bounce forever",
-        duration: "eventually",
-        easing: "springy",
+        rules: ["Use color consistently."],
+        palette: ["One", "Two", "Three", "Four", "Five"].map((name) => ({
+          name,
+          value: "#17231F",
+          role: "Decoration",
+          usage: "Accents",
+          contrast: "pass" as const,
+        })),
       }),
     ).toThrow();
   });

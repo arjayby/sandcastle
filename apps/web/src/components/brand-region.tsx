@@ -1,5 +1,7 @@
+import { Button } from "@sandcastle/ui/components/button";
 import { Spinner } from "@sandcastle/ui/components/spinner";
 import { cn } from "@sandcastle/ui/lib/utils";
+import { FocusIcon } from "lucide-react";
 import type { CSSProperties, MouseEvent } from "react";
 
 import type { BrandRegion } from "@/lib/brand-system";
@@ -271,36 +273,49 @@ function InterfaceRegion({
             {region.content.example.body}
           </p>
           <div className="flex gap-[var(--brand-spacing-small)]">
-            <span className="rounded-[var(--brand-radius-control)] bg-[var(--brand-ink)] px-4 py-2 font-semibold text-[var(--brand-paper)] text-xs">
+            <button
+              type="button"
+              className="brand-interface-control rounded-[var(--brand-radius-control)] bg-[var(--brand-ink)] px-4 py-2 font-semibold text-[var(--brand-paper)] text-xs"
+            >
               {region.content.example.callToAction}
-            </span>
-            <span className="rounded-[var(--brand-radius-control)] border border-[var(--brand-ink)]/30 px-4 py-2 font-semibold text-xs">
+            </button>
+            <button
+              type="button"
+              className="brand-interface-control rounded-[var(--brand-radius-control)] border border-[var(--brand-ink)]/30 px-4 py-2 font-semibold text-xs"
+            >
               {region.content.example.secondaryAction}
-            </span>
+            </button>
           </div>
         </div>
       </div>
       <div className="flex flex-col p-7">
         <RegionLabel region={region} />
         <div className="mt-auto grid grid-cols-2 gap-3">
-          <div className="rounded-[var(--brand-radius-card)] border border-[var(--brand-ink)]/15 bg-white p-4 shadow-[var(--brand-shadow-card)]">
+          <article
+            aria-label={region.content.example.cardTitle}
+            className="brand-interface-control rounded-[var(--brand-radius-card)] border border-[var(--brand-ink)]/15 bg-white p-4 shadow-[var(--brand-shadow-card)]"
+          >
             <p className="brand-display text-2xl text-[var(--brand-ink)]">
               {region.content.example.cardTitle}
             </p>
             <p className="mt-2 text-[var(--brand-muted)] text-xs">
               {region.content.example.cardDescription}
             </p>
-          </div>
+          </article>
           <div className="flex flex-col gap-2">
-            <div className="font-medium text-[10px] text-[var(--brand-ink)]">
-              <p>{region.content.example.inputLabel}</p>
-              <span className="mt-1 block rounded-[var(--brand-radius-control)] border border-[var(--brand-ink)]/25 bg-white px-3 py-2 font-normal text-[var(--brand-muted)] text-xs">
-                {region.content.example.inputPlaceholder}
-              </span>
-            </div>
-            <div className="rounded-[var(--brand-radius-control)] bg-[var(--brand-ink)] px-3 py-2 text-center text-[var(--brand-paper)] text-xs">
-              {region.content.example.callToAction}
-            </div>
+            <label
+              htmlFor="brand-example-email"
+              className="font-medium text-[10px] text-[var(--brand-ink)]"
+            >
+              {region.content.example.inputLabel}
+            </label>
+            <input
+              id="brand-example-email"
+              aria-label={region.content.example.inputLabel}
+              placeholder={region.content.example.inputPlaceholder}
+              readOnly
+              className="brand-interface-control rounded-[var(--brand-radius-control)] border border-[var(--brand-ink)]/25 bg-white px-3 py-2 font-normal text-[var(--brand-ink)] text-xs placeholder:text-[var(--brand-muted)]"
+            />
           </div>
         </div>
       </div>
@@ -377,7 +392,7 @@ export default function BrandRegionCard({
 }: {
   region: BrandRegion;
   isSelected: boolean;
-  onSelect: (event: MouseEvent<HTMLButtonElement>) => void;
+  onSelect: (event: MouseEvent<HTMLElement>) => void;
 }) {
   const style: CSSProperties = {
     left: region.frame.x,
@@ -387,20 +402,27 @@ export default function BrandRegionCard({
   };
 
   return (
-    <button
-      type="button"
+    <section
       aria-label={`${region.name} Brand Region`}
-      aria-pressed={isSelected}
       data-canvas-region={region.id}
       className={cn(
-        "absolute overflow-hidden border-0 p-0 text-left shadow-[0_18px_50px_rgba(65,54,39,0.11)] outline-none transition-[box-shadow] focus-visible:ring-4 focus-visible:ring-[var(--brand-ink)]/50",
+        "group/region absolute overflow-hidden border-0 p-0 text-left shadow-[0_18px_50px_rgba(65,54,39,0.11)] outline-none transition-[box-shadow]",
         isSelected &&
           "shadow-[0_26px_70px_rgba(23,35,31,0.2)] ring-4 ring-[var(--brand-ink)]",
       )}
       style={style}
-      onClick={onSelect}
     >
+      <Button
+        variant="outline"
+        size="icon-sm"
+        aria-label={`Inspect ${region.name} Brand Region`}
+        aria-pressed={isSelected}
+        className="absolute top-2 right-2 z-10 opacity-0 focus:opacity-100 group-hover/region:opacity-100"
+        onClick={onSelect}
+      >
+        <FocusIcon />
+      </Button>
       <BrandRegionContent region={region} />
-    </button>
+    </section>
   );
 }

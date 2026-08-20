@@ -6,15 +6,41 @@ const nonEmptyStringArray = z.array(z.string().trim().min(1)).min(1);
 const tokenNameSchema = z.string().regex(/^[a-z][a-z0-9-]*$/);
 const cssDurationSchema = z
   .string()
-  .regex(/^\d+(?:\.\d+)?m?s$/, "Motion duration must be a CSS time value");
+  .regex(/^\d+(?:\.\d+)?m?s$/, "Motion duration must be a CSS time value")
+  .refine((value) => {
+    const match = value.match(/^(\d+(?:\.\d+)?)(m?s)$/);
+    if (!match?.[1]) {
+      return false;
+    }
+    const milliseconds = Number(match[1]) * (match[2] === "s" ? 1000 : 1);
+    return milliseconds >= 80 && milliseconds <= 1000;
+  }, "Motion duration must be between 80ms and 1000ms");
 const cssEasingSchema = z
   .string()
   .regex(
     /^cubic-bezier\(\s*-?(?:\d+|\d*\.\d+)\s*,\s*-?(?:\d+|\d*\.\d+)\s*,\s*-?(?:\d+|\d*\.\d+)\s*,\s*-?(?:\d+|\d*\.\d+)\s*\)$/,
     "Motion easing must be a CSS cubic-bezier value",
+  )
+  .refine((value) => {
+    const coordinates = value.match(/-?(?:\d*\.\d+|\d+)/g)?.map(Number);
+    return (
+      coordinates?.length === 4 &&
+      (coordinates[0] ?? -1) >= 0 &&
+      (coordinates[0] ?? 2) <= 1 &&
+      (coordinates[2] ?? -1) >= 0 &&
+      (coordinates[2] ?? 2) <= 1
+    );
+  }, "Motion easing x coordinates must be between 0 and 1");
+const cssTokenValueSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .refine(
+    (value) => !/[;{}]/.test(value),
+    "Token values cannot contain CSS declaration delimiters",
   );
 const tokenRecordSchema = z
-  .record(tokenNameSchema, z.string().trim().min(1))
+  .record(tokenNameSchema, cssTokenValueSchema)
   .refine((tokens) => Object.keys(tokens).length > 0, "Tokens are required");
 
 const googleFontStylesheetSchema = z
@@ -89,21 +115,44 @@ export const logoGenerationSchema = logoGenerationContentSchema
     "Logo variants must contain distinct SVG artwork",
   );
 
-export const colorGenerationSchema = z.object({
-  summary: z.string().trim().min(1),
-  rules: nonEmptyStringArray,
-  palette: z
-    .array(
-      z.object({
-        name: z.string().trim().min(1),
-        value: hexColorSchema,
-        role: z.string().trim().min(1),
-        usage: z.string().trim().min(1),
-        contrast: z.enum(["pass", "warning"]),
-      }),
-    )
-    .min(5),
-});
+const requiredColorRoles = [
+  "foundation",
+  "primary",
+  "support",
+  "accent",
+  "surface",
+] as const;
+
+export const colorGenerationSchema = z
+  .object({
+    summary: z.string().trim().min(1),
+    rules: nonEmptyStringArray,
+    palette: z
+      .array(
+        z.object({
+          name: z.string().trim().min(1),
+          value: hexColorSchema,
+          role: z.string().trim().min(1),
+          usage: z.string().trim().min(1),
+          contrast: z.enum(["pass", "warning"]),
+        }),
+      )
+      .min(5),
+  })
+  .superRefine((color, ctx) => {
+    const roles = new Set(
+      color.palette.map(({ role }) => role.trim().toLowerCase()),
+    );
+    for (const role of requiredColorRoles) {
+      if (!roles.has(role)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["palette"],
+          message: `Color palette must include the ${role} role`,
+        });
+      }
+    }
+  });
 
 export const typographyGenerationSchema = z.object({
   summary: z.string().trim().min(1),
@@ -181,8 +230,8 @@ export const designTokensGenerationSchema = z.object({
       "At least five color tokens are required",
     ),
   fonts: z.object({
-    display: z.string().trim().min(1),
-    body: z.string().trim().min(1),
+    display: cssTokenValueSchema,
+    body: cssTokenValueSchema,
   }),
   typeScale: tokenRecordSchema,
   spacing: tokenRecordSchema,

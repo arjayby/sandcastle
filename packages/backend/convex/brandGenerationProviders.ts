@@ -89,16 +89,19 @@ function enforceTokenDependencies(
   candidate: unknown,
 ) {
   const generated = designTokensGenerationSchema.parse(candidate);
-  const [ink, primary, support, accent, surface] = context.color.palette;
+  const colorForRole = (role: string) =>
+    context.color.palette.find(
+      (color) => color.role.trim().toLowerCase() === role,
+    )?.value;
 
   return designTokensGenerationSchema.parse({
     ...generated,
     colors: {
-      ink: ink?.value,
-      primary: primary?.value,
-      support: support?.value,
-      accent: accent?.value,
-      surface: surface?.value,
+      ink: colorForRole("foundation"),
+      primary: colorForRole("primary"),
+      support: colorForRole("support"),
+      accent: colorForRole("accent"),
+      surface: colorForRole("surface"),
     },
     fonts: {
       display: `"${context.typography.display}", ${context.typography.displayFallbacks.join(", ")}`,
@@ -310,7 +313,7 @@ const controlledProvider: BrandGenerationProvider = {
       spacing: { small: "8px", medium: "16px", large: "32px" },
       radius: { control: "8px", card: "12px" },
       shadows: { card: "0 18px 50px rgba(23, 35, 31, 0.12)" },
-      motion: { duration: "1ms", easing: "cubic-bezier(0, 0, 1, 1)" },
+      motion: { duration: "320ms", easing: "cubic-bezier(0, 0, 1, 1)" },
     });
   },
 };
@@ -343,7 +346,10 @@ const liveProvider: BrandGenerationProvider = {
     const result = await brandAgent.generateObject(
       ctx,
       { userId: context.ownerId },
-      { schema: colorGenerationSchema, prompt: regionPrompt("color", context) },
+      {
+        schema: colorGenerationSchema,
+        prompt: `${regionPrompt("color", context)} Return at least one palette entry for each exact semantic role: Foundation, Primary, Support, Accent, and Surface.`,
+      },
     );
     return colorGenerationSchema.parse(result.object);
   },

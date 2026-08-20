@@ -489,8 +489,6 @@ export type ProgressiveGenerationData = {
     | "color"
     | "typography"
     | "voice-and-tone"
-    | "photography-direction"
-    | "photography"
     | "motion"
     | "interface-foundation"
     | "design-tokens"
@@ -705,14 +703,18 @@ export function createProgressiveBrandSystem(
     }
   }) as BrandSystem["regions"];
 
+  const colorForRole = (role: string) =>
+    color?.palette.find(
+      (paletteColor) => paletteColor.role.trim().toLowerCase() === role,
+    )?.value;
   const generatedTheme = color
     ? {
         ...fallback.theme,
-        ink: color.palette[0]?.value ?? fallback.theme.ink,
-        saffron: color.palette[1]?.value ?? fallback.theme.saffron,
-        aloe: color.palette[2]?.value ?? fallback.theme.aloe,
-        clay: color.palette[3]?.value ?? fallback.theme.clay,
-        paper: color.palette[4]?.value ?? fallback.theme.paper,
+        ink: colorForRole("foundation") ?? fallback.theme.ink,
+        saffron: colorForRole("primary") ?? fallback.theme.saffron,
+        aloe: colorForRole("support") ?? fallback.theme.aloe,
+        clay: colorForRole("accent") ?? fallback.theme.clay,
+        paper: colorForRole("surface") ?? fallback.theme.paper,
       }
     : fallback.theme;
 
