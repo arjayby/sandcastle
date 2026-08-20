@@ -49,8 +49,12 @@ export type BrandGenerationProvider = {
   ) => Promise<VoiceGeneration>;
 };
 
-const controlledSvg =
+const controlledPrimaryLockupSvg =
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 80"><title>Northstar signal mark</title><path fill="#17231F" d="M12 12h56v56H12zM88 24h136v12H88zM88 48h104v10H88z"/></svg>';
+const controlledWordmarkSvg =
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 80"><title>Northstar wordmark</title><path fill="#17231F" d="M12 26h216v12H12zM12 48h164v8H12z"/></svg>';
+const controlledSymbolSvg =
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><title>Northstar symbol</title><path fill="#17231F" d="M40 5l10 25 25 10-25 10-10 25-10-25L5 40l25-10z"/></svg>';
 
 const controlledProvider: BrandGenerationProvider = {
   async createDirection() {
@@ -74,9 +78,9 @@ const controlledProvider: BrandGenerationProvider = {
       wordmark: context.companyName.toUpperCase(),
       monogram: context.companyName.slice(0, 1).toUpperCase(),
       tagline: "Plan with a clearer signal.",
-      primaryLockupSvg: controlledSvg,
-      wordmarkSvg: controlledSvg,
-      symbolSvg: controlledSvg,
+      primaryLockupSvg: controlledPrimaryLockupSvg,
+      wordmarkSvg: controlledWordmarkSvg,
+      symbolSvg: controlledSymbolSvg,
     });
   },
   async createColor() {

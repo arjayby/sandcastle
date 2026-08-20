@@ -55,9 +55,7 @@ export const brandDirectionSchema = z.object({
   attributes: z.array(z.string().trim().min(1)).length(3),
 });
 
-export const logoGenerationSchema = z.object({
-  summary: z.string().trim().min(1),
-  rules: nonEmptyStringArray,
+export const logoGenerationContentSchema = z.object({
   wordmark: z.string().trim().min(1),
   monogram: z.string().trim().min(1),
   tagline: z.string().trim().min(1),
@@ -65,6 +63,18 @@ export const logoGenerationSchema = z.object({
   wordmarkSvg: safeSvgSchema,
   symbolSvg: safeSvgSchema,
 });
+
+export const logoGenerationSchema = logoGenerationContentSchema
+  .extend({
+    summary: z.string().trim().min(1),
+    rules: nonEmptyStringArray,
+  })
+  .refine(
+    (logo) =>
+      new Set([logo.primaryLockupSvg, logo.wordmarkSvg, logo.symbolSvg])
+        .size === 3,
+    "Logo variants must contain distinct SVG artwork",
+  );
 
 export const colorGenerationSchema = z.object({
   summary: z.string().trim().min(1),
@@ -147,6 +157,35 @@ function stylesheetFamilyNames(stylesheetUrl: string) {
     .map(normalizedFamilyName);
 }
 
+function fontFaceWeights(stylesheet: string) {
+  const weights = new Map<string, Array<[number, number]>>();
+  for (const match of stylesheet.matchAll(/@font-face\s*{([^}]*)}/gi)) {
+    const declaration = match[1] ?? "";
+    const family = declaration.match(
+      /font-family:\s*['"]?([^;'"\n]+)['"]?\s*;/i,
+    )?.[1];
+    const weight = declaration.match(/font-weight:\s*(\d+)(?:\s+(\d+))?\s*;/i);
+    if (!(family && weight?.[1])) {
+      continue;
+    }
+    const minimum = Number(weight[1]);
+    const maximum = Number(weight[2] ?? weight[1]);
+    const key = normalizedFamilyName(family);
+    weights.set(key, [...(weights.get(key) ?? []), [minimum, maximum]]);
+  }
+  return weights;
+}
+
+function supportsWeight(
+  availableWeights: Map<string, Array<[number, number]>>,
+  family: string,
+  weight: number,
+) {
+  return availableWeights
+    .get(normalizedFamilyName(family))
+    ?.some(([minimum, maximum]) => weight >= minimum && weight <= maximum);
+}
+
 export async function validateTypographyWithGoogleFonts(value: unknown) {
   const typography = typographyGenerationSchema.parse(value);
   const selectedFamilies = stylesheetFamilyNames(typography.stylesheetUrl);
@@ -167,19 +206,24 @@ export async function validateTypographyWithGoogleFonts(value: unknown) {
     throw new Error("The selected Google Fonts stylesheet is unavailable");
   }
 
-  const stylesheet = (await response.text()).toLowerCase();
+  const stylesheet = await response.text();
+  const availableWeights = fontFaceWeights(stylesheet);
   for (const family of requiredFamilies) {
-    if (!stylesheet.includes(`font-family: '${family}'`)) {
+    if (!availableWeights.has(family)) {
       throw new Error(`Google Fonts did not return the ${family} family`);
     }
   }
 
-  for (const weight of [
-    ...typography.displayWeights,
-    ...typography.bodyWeights,
-  ]) {
-    if (!stylesheet.includes(`font-weight: ${weight}`)) {
-      throw new Error(`Google Fonts did not return weight ${weight}`);
+  for (const [family, weights] of [
+    [typography.display, typography.displayWeights],
+    [typography.body, typography.bodyWeights],
+  ] as const) {
+    for (const weight of weights) {
+      if (!supportsWeight(availableWeights, family, weight)) {
+        throw new Error(
+          `Google Fonts did not return ${family} weight ${weight}`,
+        );
+      }
     }
   }
 

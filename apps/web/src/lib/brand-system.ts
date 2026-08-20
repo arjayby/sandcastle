@@ -1,6 +1,7 @@
 import {
   brandDirectionSchema,
   colorGenerationSchema,
+  logoGenerationContentSchema,
   logoGenerationSchema,
   typographyGenerationSchema,
   voiceGenerationSchema,
@@ -22,15 +23,6 @@ const sharedRegionShape = {
   rules: z.array(z.string().min(1)).min(1),
 };
 
-const logoContentSchema = logoGenerationSchema.pick({
-  wordmark: true,
-  monogram: true,
-  tagline: true,
-  primaryLockupSvg: true,
-  wordmarkSvg: true,
-  symbolSvg: true,
-});
-
 const typographyContentSchema = typographyGenerationSchema.omit({
   summary: true,
   rules: true,
@@ -45,7 +37,7 @@ const logoRegionSchema = z.object({
   ...sharedRegionShape,
   id: z.literal("logo"),
   name: z.literal("Logo"),
-  content: logoContentSchema.extend({
+  content: logoGenerationContentSchema.extend({
     variants: z.array(z.string().min(1)).min(3),
   }),
 });

@@ -13,6 +13,10 @@ describe("generated logo safety boundary", () => {
   test("accepts constrained logo SVG", () => {
     const safeSvg =
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 80"><title>Northstar wordmark</title><path fill="#17231F" d="M8 8h64v64H8z"/></svg>';
+    const safeWordmarkSvg =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 80"><title>Northstar wordmark</title><path fill="#17231F" d="M8 24h224v16H8z"/></svg>';
+    const safeSymbolSvg =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><title>Northstar symbol</title><circle fill="#17231F" cx="40" cy="40" r="32"/></svg>';
 
     expect(sanitizeGeneratedSvg(safeSvg)).toBe(safeSvg);
     expect(
@@ -23,8 +27,8 @@ describe("generated logo safety boundary", () => {
         monogram: "N",
         tagline: "Plan with a clearer signal.",
         primaryLockupSvg: safeSvg,
-        wordmarkSvg: safeSvg,
-        symbolSvg: safeSvg,
+        wordmarkSvg: safeWordmarkSvg,
+        symbolSvg: safeSymbolSvg,
       }),
     ).toBeDefined();
   });
@@ -40,6 +44,24 @@ describe("generated logo safety boundary", () => {
     for (const svg of unsafeSvgs) {
       expect(() => sanitizeGeneratedSvg(svg)).toThrow();
     }
+  });
+
+  test("rejects identical SVGs presented as three logo variants", () => {
+    const safeSvg =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><title>Mark</title><path d="M8 8h64v64H8z"/></svg>';
+
+    expect(() =>
+      logoGenerationSchema.parse({
+        summary: "A precise signal.",
+        rules: ["Keep clear space around the mark."],
+        wordmark: "NORTHSTAR",
+        monogram: "N",
+        tagline: "Plan clearly.",
+        primaryLockupSvg: safeSvg,
+        wordmarkSvg: safeSvg,
+        symbolSvg: safeSvg,
+      }),
+    ).toThrow();
   });
 });
 
@@ -71,11 +93,11 @@ describe("Google Fonts generation contract", () => {
         .mockResolvedValue(
           new Response(
             [
-              "font-family: 'Inter'; font-weight: 400;",
-              "font-family: 'Inter'; font-weight: 500;",
-              "font-family: 'Inter'; font-weight: 600;",
-              "font-family: 'Newsreader'; font-weight: 400;",
-              "font-family: 'Newsreader'; font-weight: 600;",
+              "@font-face { font-family: 'Inter'; font-weight: 400; }",
+              "@font-face { font-family: 'Inter'; font-weight: 500; }",
+              "@font-face { font-family: 'Inter'; font-weight: 600; }",
+              "@font-face { font-family: 'Newsreader'; font-weight: 400; }",
+              "@font-face { font-family: 'Newsreader'; font-weight: 600; }",
             ].join("\n"),
           ),
         ),
@@ -94,5 +116,27 @@ describe("Google Fonts generation contract", () => {
           "https://fonts.googleapis.com/css2?family=Newsreader:wght@400;600&display=swap",
       }),
     ).rejects.toThrow("both selected families");
+  });
+
+  test("rejects a weight supplied only by the other selected family", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(
+            [
+              "@font-face { font-family: 'Inter'; font-weight: 400; }",
+              "@font-face { font-family: 'Inter'; font-weight: 500; }",
+              "@font-face { font-family: 'Inter'; font-weight: 600; }",
+              "@font-face { font-family: 'Newsreader'; font-weight: 400; }",
+            ].join("\n"),
+          ),
+        ),
+    );
+
+    await expect(validateTypographyWithGoogleFonts(typography)).rejects.toThrow(
+      "Newsreader weight 600",
+    );
   });
 });
