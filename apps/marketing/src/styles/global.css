@@ -20,7 +20,8 @@
     text-underline-offset: 0.2em;
   }
 
-  a:focus-visible {
+  a:focus-visible,
+  summary:focus-visible {
     outline: 3px solid var(--sc-color-ink);
     outline-offset: 3px;
   }
@@ -327,6 +328,29 @@
     letter-spacing: 0.06em;
     text-align: center;
     text-transform: uppercase;
+  }
+
+  .article-body {
+    font-size: 1.0625rem;
+    line-height: 1.8;
+  }
+
+  .article-body h2 {
+    margin-top: 3rem;
+    font-family: var(--sc-font-display);
+    font-size: clamp(2rem, 5vw, 2.75rem);
+    line-height: 1.08;
+    letter-spacing: -0.025em;
+  }
+
+  .article-body p,
+  .article-body ul,
+  .article-body ol {
+    margin-top: 1.25rem;
+  }
+
+  .article-body a {
+    font-weight: 650;
   }
 
   .brand-region-photography {
