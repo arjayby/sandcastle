@@ -7,12 +7,19 @@ import SignInForm from "@/components/sign-in-form";
 import SignUpForm from "@/components/sign-up-form";
 import { loadBrandBriefDraft } from "@/lib/brand-brief-draft";
 
+interface AuthSearch {
+  mode?: "sign-in";
+}
+
 export const Route = createFileRoute("/_auth")({
+  validateSearch: (search): AuthSearch =>
+    search.mode === "sign-in" ? { mode: "sign-in" } : {},
   component: AuthLayout,
 });
 
 function AuthLayout() {
-  const [showSignIn, setShowSignIn] = useState(false);
+  const { mode } = Route.useSearch();
+  const [showSignIn, setShowSignIn] = useState(mode === "sign-in");
   const [hasBrandBrief] = useState(() => loadBrandBriefDraft() !== null);
 
   return (

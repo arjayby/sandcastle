@@ -1,0 +1,24 @@
+{
+  "name": "marketing",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "check-types": "astro check",
+    "test": "pnpm build && node --test tests/*.test.mjs && playwright test"
+  },
+  "dependencies": {
+    "@sandcastle/brand": "workspace:*",
+    "@tailwindcss/vite": "^4.3.3",
+    "astro": "^7.2.4",
+    "tailwindcss": "catalog:"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.6",
+    "@playwright/test": "^1.62.1",
+    "typescript": "catalog:",
+    "vite": "^8.2.1"
+  }
+}

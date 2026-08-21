@@ -1,0 +1,19 @@
+---
+interface Props {
+  productUrl: string;
+}
+
+const { productUrl } = Astro.props;
+---
+
+<footer class="border-t border-[var(--sc-color-sand)]">
+  <div
+    class="mx-auto flex max-w-7xl flex-col gap-6 px-5 py-8 text-sm text-[var(--sc-color-muted)] sm:flex-row sm:items-center sm:justify-between sm:px-8"
+  >
+    <p>Sandcastle creates coherent Brand Systems for founders who are ready to ship.</p>
+    <nav aria-label="Footer navigation" class="flex flex-wrap gap-x-6 gap-y-2">
+      <a class="quiet-link" href="#example">View an example</a>
+      <a class="quiet-link" href={productUrl}>Build your Brand System</a>
+    </nav>
+  </div>
+</footer>

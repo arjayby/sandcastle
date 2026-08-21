@@ -1,0 +1,38 @@
+---
+import wordmarkUrl from "@sandcastle/brand/assets/sandcastle-wordmark-ink.svg";
+
+interface Props {
+  productUrl: string;
+  signInUrl: string;
+}
+
+const { productUrl, signInUrl } = Astro.props;
+---
+
+<header class="border-b border-[var(--sc-color-sand)]">
+  <div
+    class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-5 py-3 sm:px-8"
+  >
+    <a
+      aria-label="Sandcastle home"
+      class="flex min-h-11 items-center rounded-[var(--sc-corner-control)]"
+      href="/"
+    >
+      <img
+        alt="Sandcastle"
+        class="h-8 w-auto sm:h-9"
+        height="40"
+        src={wordmarkUrl.src}
+        width="172"
+      />
+    </a>
+    <nav
+      aria-label="Primary navigation"
+      class="order-3 flex w-full flex-wrap items-center justify-between gap-2 sm:order-none sm:w-auto sm:flex-nowrap sm:justify-end sm:gap-5"
+    >
+      <a class="quiet-link" href="#example">View an example</a>
+      <a class="quiet-link" href={signInUrl}>Sign in</a>
+      <a class="action-link header-action" href={productUrl}>Build your Brand System</a>
+    </nav>
+  </div>
+</header>
