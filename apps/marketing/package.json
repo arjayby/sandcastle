@@ -7,7 +7,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "check-types": "astro check",
-    "test": "pnpm build && node --test --test-concurrency=1 tests/*.test.mjs && playwright test"
+    "test": "PUBLIC_PRODUCT_URL=http://localhost:5173 pnpm build && node --test --test-concurrency=1 tests/*.test.mjs && playwright test"
   },
   "dependencies": {
     "@astrojs/mdx": "^7.0.7",

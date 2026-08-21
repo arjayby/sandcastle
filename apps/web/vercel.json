@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "cd ../.. && pnpm exec turbo run build --filter=web",
+  "framework": "vite",
+  "ignoreCommand": "cd ../.. && pnpm exec turbo-ignore web --fallback=HEAD^1",
+  "outputDirectory": "dist",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
