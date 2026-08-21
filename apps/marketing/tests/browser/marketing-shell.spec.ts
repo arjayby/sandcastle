@@ -5,16 +5,19 @@ test("a Brand Builder can open the public Brand Brief from the hero", async ({
 }) => {
   await page.goto("/");
 
-  const action = page
+  const marketingOrigin = new URL(page.url()).origin;
+  const heroBrandSystemLink = page
     .getByRole("main")
     .getByRole("link", { name: "Build your Brand System" })
     .first();
-  const productUrl = await action.getAttribute("href");
+  const productUrl = await heroBrandSystemLink.getAttribute("href");
 
   if (!productUrl) {
     throw new Error("The hero action must have a product URL");
   }
-  expect(new URL(productUrl).pathname).toBe("/new");
+  const productDestination = new URL(productUrl);
+  expect(productDestination.origin).not.toBe(marketingOrigin);
+  expect(productDestination.pathname).toBe("/new");
 
   await page.route(productUrl, async (route) => {
     await route.fulfill({
@@ -22,7 +25,7 @@ test("a Brand Builder can open the public Brand Brief from the hero", async ({
       body: "<title>Brand Brief</title><h1>Start your Brand Brief</h1>",
     });
   });
-  await action.click();
+  await heroBrandSystemLink.click();
 
   await expect(page).toHaveURL(productUrl);
   await expect(
