@@ -1,0 +1,73 @@
+---
+interface Props {
+  productUrl: string;
+}
+
+const { productUrl } = Astro.props;
+---
+
+<main>
+  <section
+    class="mx-auto grid max-w-7xl gap-12 px-5 py-16 sm:px-8 sm:py-24 lg:grid-cols-[minmax(0,0.9fr)_minmax(28rem,1.1fr)] lg:items-center lg:gap-16 lg:py-32"
+  >
+    <div class="max-w-2xl">
+      <p class="eyebrow">Expert brand creation</p>
+      <h1
+        class="marketing-heading mt-5 max-w-3xl text-5xl leading-[0.98] tracking-[-0.035em] sm:text-6xl lg:text-7xl"
+      >
+        Go from a Brand Brief to a brand that is ready to ship.
+      </h1>
+      <p class="mt-7 max-w-xl text-lg leading-8 text-[var(--sc-color-muted)]">
+        Direct an expert Brand Agent in plain language. Get one coherent system for
+        your logo, color, typography, voice, motion, and interface.
+      </p>
+      <div class="mt-8 flex flex-wrap items-center gap-4">
+        <a class="action-link" href={productUrl}>Build your Brand System</a>
+        <a class="secondary-link" href="#example">View an example</a>
+      </div>
+      <p class="mt-5 text-sm text-[var(--sc-color-muted)]">
+        Start your Brand Brief now. Sign in only when you generate.
+      </p>
+    </div>
+
+    <div
+      id="example"
+      class="relative scroll-mt-8 rounded-[var(--sc-corner-panel)] border border-[var(--sc-color-sand)] bg-[var(--sc-color-surface)] p-3 shadow-[0_24px_80px_rgba(32,32,30,0.10)] sm:p-5"
+    >
+      <div
+        aria-hidden="true"
+        class="absolute -top-4 -right-3 -z-10 h-28 w-28 rounded-[var(--sc-corner-panel)] bg-[var(--sc-color-amber)] sm:-right-5"
+      ></div>
+      <div class="flex items-center justify-between border-b border-[var(--sc-color-sand)] pb-3">
+        <p class="font-medium text-sm">Example Brand System</p>
+        <p class="technical-label">Ready to ship</p>
+      </div>
+      <div class="mt-4 grid gap-3 sm:grid-cols-[1.2fr_0.8fr]">
+        <div class="brand-card min-h-64 bg-[#24334b] text-[#f7f1df] sm:min-h-80">
+          <p class="technical-label text-[#c9d2df]">Wordmark</p>
+          <div class="mt-auto">
+            <p class="brand-display text-5xl sm:text-6xl">Northstar</p>
+            <p class="mt-2 max-w-xs text-sm text-[#c9d2df]">
+              Clear direction for ambitious teams.
+            </p>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-1">
+          <div class="brand-card bg-[#d9d2bf] text-[#24334b]">
+            <p class="technical-label">Color</p>
+            <p class="mt-auto font-[var(--sc-font-technical)] text-xs">#24334B</p>
+          </div>
+          <div class="brand-card bg-[#ee7c58] text-[#2e1f1b]">
+            <p class="technical-label">Voice</p>
+            <p class="mt-auto font-medium text-sm">Assured. Clear. Human.</p>
+          </div>
+        </div>
+      </div>
+      <div class="mt-3 grid grid-cols-3 gap-3">
+        <div class="system-chip">Logo</div>
+        <div class="system-chip">Type</div>
+        <div class="system-chip">Tokens</div>
+      </div>
+    </div>
+  </section>
+</main>

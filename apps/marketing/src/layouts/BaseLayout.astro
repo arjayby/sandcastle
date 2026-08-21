@@ -1,0 +1,31 @@
+---
+import geistMonoUrl from "@sandcastle/brand/fonts/geist-mono-latin-wght-normal.woff2";
+import instrumentSerifUrl from "@sandcastle/brand/fonts/instrument-serif-latin-400-normal.woff2";
+import interUrl from "@sandcastle/brand/fonts/inter-latin-wght-normal.woff2";
+import "@sandcastle/brand/styles.css";
+
+import "../styles/global.css";
+
+interface Props {
+  description: string;
+  title: string;
+}
+
+const { description, title } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="description" content={description} />
+    <link rel="preload" href={instrumentSerifUrl} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={interUrl} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={geistMonoUrl} as="font" type="font/woff2" crossorigin />
+    <title>{title}</title>
+  </head>
+  <body class="sc-shell min-h-screen">
+    <slot />
+  </body>
+</html>
