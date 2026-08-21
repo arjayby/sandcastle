@@ -39,6 +39,22 @@
       rgb(173 149 112 / 9%) 0 0.9px,
       transparent 1.4px
     );
+  background-repeat: no-repeat;
+}
+
+.brand-paper:focus-visible {
+  outline: 3px solid #20201e;
+  outline-offset: -3px;
+}
+
+.editor-chrome {
+  --background: #20201e;
+  --foreground: #f7f4ed;
+  --muted: #34332f;
+  --muted-foreground: #c8c3b9;
+  --border: #56544e;
+  --input: #68655e;
+  --ring: #f4c95d;
 }
 
 .brand-display {
@@ -108,6 +124,15 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .brand-canvas-shell *,
+  .brand-canvas-shell *::before,
+  .brand-canvas-shell *::after {
+    scroll-behavior: auto;
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+    transition-duration: 0s;
+  }
+
   .brand-motion-orbit {
     animation: none;
     transform: translate3d(0, 0, 0);

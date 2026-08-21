@@ -84,7 +84,7 @@ type PinchState = {
 };
 
 const INSPECTOR_CLASS_NAME =
-  "absolute right-3 bottom-3 left-3 max-h-[55%] overflow-auto border bg-background p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-xl lg:top-3 lg:bottom-3 lg:left-auto lg:max-h-none lg:w-80 lg:pb-5";
+  "editor-chrome absolute right-3 bottom-3 left-3 max-h-[55%] overflow-auto border bg-background p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-xl lg:top-3 lg:bottom-3 lg:left-auto lg:max-h-none lg:w-80 lg:pb-5";
 
 const brandRegionNames: Record<BrandRegion["id"], string> = {
   logo: "Logo",
@@ -349,8 +349,18 @@ function RegionDetails({
               <span>
                 <strong>{color.name}</strong> · {color.role}
                 <span className="block text-muted-foreground">
-                  {color.usage} · {color.contrast}
+                  {color.usage}
                 </span>
+                {color.contrast === "warning" ? (
+                  <span className="mt-1 block font-semibold text-foreground">
+                    Contrast warning: does not meet common text contrast
+                    thresholds.
+                  </span>
+                ) : (
+                  <span className="mt-1 block text-muted-foreground">
+                    Meets common text contrast thresholds.
+                  </span>
+                )}
               </span>
               <CopyArtifactButton
                 label={`Copy ${color.name} color value`}
@@ -585,6 +595,8 @@ export default function BrandSystemCanvas({
     !generation.builtInFallback;
   const viewportRef = useRef<HTMLDivElement>(null);
   const inspectorRef = useRef<HTMLElement>(null);
+  const inspectorTriggerRef = useRef<HTMLElement>(null);
+  const systemInspectorTriggerRef = useRef<HTMLElement>(null);
   const dragRef = useRef<DragState | null>(null);
   const activeTouchesRef = useRef(new Map<number, PointerPosition>());
   const pinchRef = useRef<PinchState | null>(null);
@@ -603,6 +615,26 @@ export default function BrandSystemCanvas({
     scale: 0.5,
   });
   const transformRef = useRef(transform);
+
+  useLayoutEffect(() => {
+    if (!selectedRegionId) {
+      return;
+    }
+    inspectorRef.current
+      ?.querySelector<HTMLElement>('[aria-label="Close inspector"]')
+      ?.focus();
+  }, [selectedRegionId]);
+
+  useLayoutEffect(() => {
+    if (!isSystemRevisionOpen) {
+      return;
+    }
+    inspectorRef.current
+      ?.querySelector<HTMLElement>(
+        '[aria-label="Close system revision inspector"]',
+      )
+      ?.focus();
+  }, [isSystemRevisionOpen]);
 
   const applyTransform = useCallback((next: ViewTransform) => {
     transformRef.current = next;
@@ -921,8 +953,19 @@ export default function BrandSystemCanvas({
       return;
     }
     event.stopPropagation();
+    inspectorTriggerRef.current = event.currentTarget;
     setIsSystemRevisionOpen(false);
     setSelectedRegionId(region.id);
+  }
+
+  function closeRegionInspector() {
+    setSelectedRegionId(null);
+    inspectorTriggerRef.current?.focus();
+  }
+
+  function closeSystemRevisionInspector() {
+    setIsSystemRevisionOpen(false);
+    systemInspectorTriggerRef.current?.focus();
   }
 
   function focusRegion(region: BrandRegion) {
@@ -964,7 +1007,11 @@ export default function BrandSystemCanvas({
       style={brandThemeStyle}
     >
       <link rel="stylesheet" href={typographyRegion.content.stylesheetUrl} />
-      <header className="flex min-h-16 min-w-0 flex-wrap items-center gap-1 border-b bg-background px-3 py-2 lg:flex-nowrap lg:gap-3 lg:px-4">
+      <header
+        role="toolbar"
+        aria-label="Brand Canvas controls"
+        className="editor-chrome flex min-h-16 min-w-0 flex-wrap items-center gap-1 border-b bg-background px-3 py-2 text-foreground lg:flex-nowrap lg:gap-3 lg:px-4"
+      >
         {onSignOut ? (
           <>
             <Link
@@ -1002,7 +1049,14 @@ export default function BrandSystemCanvas({
             variant="outline"
             disabled={!revisionAvailable}
             aria-label="Revise complete Brand System"
-            onClick={() => {
+            aria-expanded={isSystemRevisionOpen}
+            aria-controls={
+              isSystemRevisionOpen
+                ? "brand-system-revision-inspector"
+                : undefined
+            }
+            onClick={(event) => {
+              systemInspectorTriggerRef.current = event.currentTarget;
               setSelectedRegionId(null);
               setIsSystemRevisionOpen(true);
             }}
@@ -1122,7 +1176,11 @@ export default function BrandSystemCanvas({
             event.preventDefault();
             fitBrandSystem();
           } else if (event.key === "Escape") {
-            setSelectedRegionId(null);
+            if (selectedRegionId) {
+              closeRegionInspector();
+            } else if (isSystemRevisionOpen) {
+              closeSystemRevisionInspector();
+            }
           } else if (
             ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(
               event.key,
@@ -1177,6 +1235,7 @@ export default function BrandSystemCanvas({
 
         {selectedRegion ? (
           <aside
+            id="brand-region-inspector"
             ref={inspectorRef}
             aria-label="Brand Region inspector"
             className={INSPECTOR_CLASS_NAME}
@@ -1194,7 +1253,7 @@ export default function BrandSystemCanvas({
                 variant="ghost"
                 size="icon-sm"
                 aria-label="Close inspector"
-                onClick={() => setSelectedRegionId(null)}
+                onClick={closeRegionInspector}
               >
                 <XIcon />
               </Button>
@@ -1230,6 +1289,7 @@ export default function BrandSystemCanvas({
         ) : null}
         {!selectedRegion && isSystemRevisionOpen && onRevise ? (
           <aside
+            id="brand-system-revision-inspector"
             ref={inspectorRef}
             aria-label="Brand System revision inspector"
             className={INSPECTOR_CLASS_NAME}
@@ -1247,7 +1307,7 @@ export default function BrandSystemCanvas({
                 variant="ghost"
                 size="icon-sm"
                 aria-label="Close system revision inspector"
-                onClick={() => setIsSystemRevisionOpen(false)}
+                onClick={closeSystemRevisionInspector}
               >
                 <XIcon />
               </Button>
