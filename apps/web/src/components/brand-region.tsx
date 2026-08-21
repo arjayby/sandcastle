@@ -5,6 +5,10 @@ import { FocusIcon, RotateCcwIcon } from "lucide-react";
 import type { CSSProperties, MouseEvent } from "react";
 
 import type { BrandRegion } from "@/lib/brand-system";
+import {
+  getCommonTextContrast,
+  getPaletteForeground,
+} from "@/lib/color-contrast";
 
 const generationStateLabels: Record<BrandRegion["state"], string> = {
   unfinished: "Unfinished",
@@ -13,6 +17,11 @@ const generationStateLabels: Record<BrandRegion["state"], string> = {
   revising: "Revising",
   failed: "Failed",
 };
+
+function regionStateLabel(region: BrandRegion) {
+  const stateName = generationStateLabels[region.state];
+  return `${region.name} ${region.state === "revising" ? "revision" : "generation"} state: ${stateName}`;
+}
 
 function RegionLabel({ region }: { region: BrandRegion }) {
   return (
@@ -25,7 +34,12 @@ function RegionLabel({ region }: { region: BrandRegion }) {
           {region.name}
         </h2>
       </div>
-      <span className="rounded-full bg-[var(--brand-aloe)]/40 px-2.5 py-1 font-medium text-[10px] text-[var(--brand-ink)] uppercase tracking-wide">
+      <span
+        role="status"
+        aria-label={regionStateLabel(region)}
+        aria-live="polite"
+        className="rounded-full bg-[var(--brand-aloe)]/40 px-2.5 py-1 font-medium text-[10px] text-[var(--brand-ink)] uppercase tracking-wide"
+      >
         {generationStateLabels[region.state]}
       </span>
     </div>
@@ -72,28 +86,34 @@ function LogoRegion({
 
 function ColorRegion({
   region,
+  brandInk,
 }: {
   region: Extract<BrandRegion, { id: "color" }>;
+  brandInk: string;
 }) {
   return (
     <div className="flex h-full flex-col bg-[var(--brand-surface)] p-7">
       <RegionLabel region={region} />
       <div className="mt-6 flex flex-1 gap-2">
-        {region.content.palette.map((color, index) => (
-          <div
-            key={color.name}
-            className="flex min-w-0 flex-1 flex-col justify-end p-2"
-            style={{
-              backgroundColor: color.value,
-              color:
-                index === 0 || index === 3 ? "#ffffff" : "var(--brand-ink)",
-            }}
-          >
-            <strong className="text-[10px]">{color.name}</strong>
-            <span className="text-[9px] opacity-80">{color.value}</span>
-            <span className="text-[9px] opacity-80">{color.contrast}</span>
-          </div>
-        ))}
+        {region.content.palette.map((color) => {
+          const foreground = getPaletteForeground(color.role, brandInk);
+          const contrast = getCommonTextContrast(color.value, foreground);
+          return (
+            <div
+              key={color.name}
+              className="flex min-w-0 flex-1 flex-col justify-end p-2"
+              style={{ backgroundColor: color.value, color: foreground }}
+            >
+              <strong className="text-[10px]">{color.name}</strong>
+              <span className="text-[9px] opacity-80">{color.value}</span>
+              <span className="text-[9px] opacity-80">
+                {contrast.passes
+                  ? `Contrast pass · ${contrast.ratio.toFixed(2)}:1`
+                  : `Contrast warning · ${contrast.ratio.toFixed(2)}:1`}
+              </span>
+            </div>
+          );
+        })}
       </div>
       <p className="mt-4 text-[var(--brand-muted)] text-xs">{region.summary}</p>
     </div>
@@ -158,7 +178,12 @@ function VoiceRegion({
     <div className="flex h-full flex-col bg-[var(--brand-ink)] p-7 text-[var(--brand-paper)]">
       <div className="flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.18em]">
         <span>Voice and Tone</span>
-        <span className="rounded-full bg-white/10 px-2.5 py-1">
+        <span
+          role="status"
+          aria-label={regionStateLabel(region)}
+          aria-live="polite"
+          className="rounded-full bg-white/10 px-2.5 py-1"
+        >
           {generationStateLabels[region.state]}
         </span>
       </div>
@@ -220,7 +245,16 @@ function PhotographyRegion({
                 {photograph.state === "generating" ? (
                   <Spinner className="size-5" />
                 ) : null}
-                <span>
+                <span
+                  role="status"
+                  aria-label={`${roleLabels[photograph.role]} photograph generation state: ${
+                    photograph.state === "failed"
+                      ? "Failed"
+                      : photograph.state === "generating"
+                        ? "Generating"
+                        : "Unfinished"
+                  }`}
+                >
                   {photograph.state === "failed"
                     ? "Generation failed"
                     : photograph.state === "generating"
@@ -369,7 +403,15 @@ function DesignTokensRegion({
         </div>
         <div className="flex flex-col gap-1 text-[var(--brand-paper)]/75 text-xs">
           <span>CSS · JSON</span>
-          <span>
+          <span
+            role="status"
+            aria-label={
+              region.state === "ready"
+                ? `${region.name} generation state: Ready for production`
+                : regionStateLabel(region)
+            }
+            aria-live="polite"
+          >
             {region.state === "ready"
               ? "Ready for production"
               : generationStateLabels[region.state]}
@@ -395,7 +437,13 @@ function DesignTokensRegion({
   );
 }
 
-function BrandRegionContent({ region }: { region: BrandRegion }) {
+function BrandRegionContent({
+  region,
+  brandInk,
+}: {
+  region: BrandRegion;
+  brandInk: string;
+}) {
   if (region.id === "photography" && region.content.photographs.length > 0) {
     return <PhotographyRegion region={region} />;
   }
@@ -408,7 +456,7 @@ function BrandRegionContent({ region }: { region: BrandRegion }) {
     case "logo":
       return <LogoRegion region={region} />;
     case "color":
-      return <ColorRegion region={region} />;
+      return <ColorRegion region={region} brandInk={brandInk} />;
     case "typography":
       return <TypographyRegion region={region} />;
     case "voice-and-tone":
@@ -429,11 +477,13 @@ export default function BrandRegionCard({
   isSelected,
   onSelect,
   onRetry,
+  brandInk,
 }: {
   region: BrandRegion;
   isSelected: boolean;
   onSelect: (event: MouseEvent<HTMLElement>) => void;
   onRetry?: () => void;
+  brandInk: string;
 }) {
   const style: CSSProperties = {
     left: region.frame.x,
@@ -458,6 +508,8 @@ export default function BrandRegionCard({
         size="icon-sm"
         aria-label={`Inspect ${region.name} Brand Region`}
         aria-pressed={isSelected}
+        aria-expanded={isSelected}
+        aria-controls={isSelected ? "brand-region-inspector" : undefined}
         className="brand-region-inspect absolute top-2 right-2 z-10 opacity-0 focus:opacity-100 group-hover/region:opacity-100"
         onClick={onSelect}
       >
@@ -473,7 +525,7 @@ export default function BrandRegionCard({
           Retry {region.name}
         </Button>
       ) : null}
-      <BrandRegionContent region={region} />
+      <BrandRegionContent region={region} brandInk={brandInk} />
     </section>
   );
 }

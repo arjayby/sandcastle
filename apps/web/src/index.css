@@ -3,42 +3,29 @@
 
 .brand-paper {
   background-color: var(--brand-paper, #f2ede4);
-  background-image:
-    radial-gradient(
-      circle at 7% 14%,
-      rgb(159 139 108 / 10%) 0 0.8px,
-      transparent 1.3px
-    ),
-    radial-gradient(
-      circle at 19% 68%,
-      rgb(125 129 124 / 9%) 0 0.7px,
-      transparent 1.2px
-    ),
-    radial-gradient(
-      circle at 33% 29%,
-      rgb(176 151 113 / 8%) 0 1px,
-      transparent 1.5px
-    ),
-    radial-gradient(
-      circle at 48% 83%,
-      rgb(128 131 127 / 8%) 0 0.8px,
-      transparent 1.3px
-    ),
-    radial-gradient(
-      circle at 64% 11%,
-      rgb(166 144 111 / 9%) 0 0.9px,
-      transparent 1.4px
-    ),
-    radial-gradient(
-      circle at 78% 56%,
-      rgb(122 126 122 / 8%) 0 0.7px,
-      transparent 1.2px
-    ),
-    radial-gradient(
-      circle at 92% 87%,
-      rgb(173 149 112 / 9%) 0 0.9px,
-      transparent 1.4px
-    );
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320' viewBox='0 0 320 320' preserveAspectRatio='none'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.72' numOctaves='4' seed='23' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23grain)' opacity='.055'/%3E%3C/svg%3E");
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.brand-paper:focus-visible {
+  outline: 3px solid #20201e;
+  outline-offset: -3px;
+}
+
+.editor-chrome {
+  --background: #20201e;
+  --foreground: #f7f4ed;
+  --muted: #34332f;
+  --muted-foreground: #c8c3b9;
+  --border: #706d66;
+  --input: #77736b;
+  --ring: #f4c95d;
+}
+
+.editor-chrome [data-slot="button"],
+.editor-chrome .brand-canvas-navigation {
+  border-color: var(--border);
 }
 
 .brand-display {
@@ -82,7 +69,7 @@
 
 @media (pointer: coarse) {
   .brand-canvas-shell [data-slot="button"],
-  .brand-canvas-navigation {
+  .brand-canvas-shell .brand-canvas-navigation {
     min-width: 44px;
     min-height: 44px;
   }
@@ -108,6 +95,15 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .brand-canvas-shell *,
+  .brand-canvas-shell *::before,
+  .brand-canvas-shell *::after {
+    scroll-behavior: auto;
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+    transition-duration: 0s;
+  }
+
   .brand-motion-orbit {
     animation: none;
     transform: translate3d(0, 0, 0);
