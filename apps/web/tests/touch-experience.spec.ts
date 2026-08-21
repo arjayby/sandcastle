@@ -6,7 +6,10 @@ import {
   test,
 } from "@playwright/test";
 
-import { expectBottomSheet } from "./helpers/responsive";
+import {
+  expectBottomSheet,
+  expectFullScreenInspector,
+} from "./helpers/responsive";
 
 type TouchPoint = {
   id: number;
@@ -115,7 +118,7 @@ test("touch controls preserve the Brand Canvas across phone, tablet, and desktop
     "Revise complete Brand System",
     "Share Review Link",
     "Fit Brand System",
-    "Sign out",
+    "Account controls",
   ];
   for (const name of smallScreenControls) {
     const controlBox = await page
@@ -211,7 +214,7 @@ test("touch controls preserve the Brand Canvas across phone, tablet, and desktop
   await color
     .getByRole("button", { name: "Inspect Color Brand Region" })
     .click();
-  await expectBottomSheet(inspector, viewport);
+  await expectFullScreenInspector(inspector, viewport);
   await inspector
     .getByLabel("Revision request for Color")
     .fill("Make the primary color cooler.");

@@ -112,18 +112,25 @@
 }
 
 .brand-paper:focus-visible {
-  outline: 3px solid #20201e;
+  outline: 3px solid var(--sc-shell-action);
   outline-offset: -3px;
 }
 
 .editor-chrome {
-  --background: #20201e;
-  --foreground: #f7f4ed;
-  --muted: #34332f;
-  --muted-foreground: #c8c3b9;
-  --border: #706d66;
-  --input: #77736b;
-  --ring: #f4c95d;
+  --background: var(--sc-shell-surface);
+  --foreground: var(--sc-shell-foreground);
+  --muted: color-mix(
+    in srgb,
+    var(--sc-shell-surface) 72%,
+    var(--sc-shell-border)
+  );
+  --muted-foreground: var(--sc-shell-muted-foreground);
+  --border: var(--sc-shell-border);
+  --input: var(--sc-shell-border);
+  --ring: var(--sc-shell-action);
+  --primary: var(--sc-shell-action);
+  --primary-foreground: var(--sc-shell-action-foreground);
+  font-family: var(--sc-font-interface);
 }
 
 .editor-chrome [data-slot="button"],

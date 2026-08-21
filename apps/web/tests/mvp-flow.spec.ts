@@ -49,7 +49,7 @@ async function runCompleteMvpFlow({
     "Revise complete Brand System",
     "Share Review Link",
     "Fit Brand System",
-    "Sign out",
+    "Account controls",
   ]) {
     const box = await page
       .getByLabel(controlName, { exact: true })

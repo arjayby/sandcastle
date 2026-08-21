@@ -9,19 +9,28 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@sandcastle/ui/components/dropdown-menu";
-import { useNavigate } from "@tanstack/react-router";
 import { useQuery } from "convex/react";
+import { UserRoundIcon } from "lucide-react";
 
 import { authClient } from "@/lib/auth-client";
 
 export default function UserMenu() {
-  const navigate = useNavigate();
   const user = useQuery(api.auth.getCurrentUser);
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger render={<Button variant="outline" />}>
-        {user?.name}
+      <DropdownMenuTrigger
+        render={
+          <Button
+            aria-label="Account controls"
+            className="sc-account-control"
+            size="sm"
+            variant="outline"
+          />
+        }
+      >
+        <UserRoundIcon />
+        <span className="hidden lg:inline">{user?.name ?? "Account"}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="bg-card">
         <DropdownMenuGroup>
@@ -30,17 +39,7 @@ export default function UserMenu() {
           <DropdownMenuItem>{user?.email}</DropdownMenuItem>
           <DropdownMenuItem
             variant="destructive"
-            onClick={() => {
-              authClient.signOut({
-                fetchOptions: {
-                  onSuccess: () => {
-                    navigate({
-                      to: "/dashboard",
-                    });
-                  },
-                },
-              });
-            }}
+            onClick={() => authClient.signOut()}
           >
             Sign Out
           </DropdownMenuItem>

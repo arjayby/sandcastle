@@ -1,6 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 
+import { signOut } from "./helpers/brand-project";
+
 const DESCRIPTION_GUIDANCE =
   "Tell us what your company does, who it serves, and what makes it different. You can also include the feeling you want, preferred colors, visual references, competitors, and anything the brand should avoid.";
 
@@ -568,7 +570,7 @@ test("a Brand Builder can create, authenticate, reopen, and persist an owned Bra
       .getByRole("img"),
   ).toHaveCount(4);
 
-  await page.getByRole("button", { name: "Sign out" }).click();
+  await signOut(page);
   await page.goto("/dashboard");
   await expect(
     page.getByRole("heading", { name: "Create your account" }),
@@ -589,7 +591,7 @@ test("a Brand Builder can create, authenticate, reopen, and persist an owned Bra
   await expect(page).toHaveURL(projectUrl);
   await expect(page.getByText(description)).toBeVisible();
 
-  await page.getByRole("button", { name: "Sign out" }).click();
+  await signOut(page);
   await page.getByRole("button", { name: "Need an account? Sign up" }).click();
   await page.getByLabel("Name").fill("Other Owner");
   await page.getByLabel("Email").fill(otherOwnerEmail);

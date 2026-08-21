@@ -56,11 +56,11 @@ test("editor chrome, generation state, contrast guidance, and motion preferences
   const toolbar = page.getByRole("toolbar", {
     name: "Brand Canvas controls",
   });
-  await expect(toolbar).toHaveCSS("background-color", "rgb(32, 32, 30)");
-  await expect(toolbar).toHaveCSS("color", "rgb(247, 244, 237)");
+  await expect(toolbar).toHaveCSS("background-color", "rgb(255, 253, 248)");
+  await expect(toolbar).toHaveCSS("color", "rgb(32, 32, 30)");
   await expect(
     toolbar.getByRole("link", { name: "All Brand Projects" }),
-  ).toHaveCSS("border-color", "rgb(112, 109, 102)");
+  ).toHaveCSS("border-color", "rgb(217, 206, 184)");
 
   await expect(
     page.getByRole("status", { name: "Color generation state: Ready" }),
@@ -76,7 +76,7 @@ test("editor chrome, generation state, contrast guidance, and motion preferences
   const viewport = page.getByRole("application", {
     name: "Brand Canvas viewport",
   });
-  await page.getByRole("button", { name: "Sign out" }).focus();
+  await page.getByRole("button", { name: "Fit Brand System" }).focus();
   await page.keyboard.press("Tab");
   await expect(viewport).toBeFocused();
   await expect(viewport).toHaveCSS("outline-style", "solid");

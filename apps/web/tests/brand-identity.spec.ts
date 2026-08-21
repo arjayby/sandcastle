@@ -18,10 +18,8 @@ test("the public Brand Brief presents the shared Sandcastle identity", async ({
 
   const homeLink = page.getByRole("link", { name: "Sandcastle home" });
   await expect(homeLink).toBeVisible();
-  const inkWordmark = homeLink.locator("img").first();
-  const paperWordmark = homeLink.locator("img").last();
-  await expect(inkWordmark).toBeVisible();
-  await expect(paperWordmark).toBeHidden();
+  const symbol = homeLink.locator("img");
+  await expect(symbol).toBeVisible();
   await expect(
     page.getByRole("heading", {
       name: "Create a complete Brand System.",
@@ -75,8 +73,7 @@ test("the public Brand Brief presents the shared Sandcastle identity", async ({
   expect(themeToggleBox?.height).toBeGreaterThanOrEqual(44);
   await themeToggle.click();
   await page.getByRole("menuitem", { name: "Dark" }).click();
-  await expect(inkWordmark).toBeHidden();
-  await expect(paperWordmark).toBeVisible();
+  await expect(symbol).toBeVisible();
   await expect(entrySurface).toHaveCSS("background-color", "rgb(32, 32, 30)");
   await expect(entrySurface).toHaveCSS("color", "rgb(247, 243, 232)");
 });

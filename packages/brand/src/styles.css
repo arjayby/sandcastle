@@ -86,8 +86,12 @@
     var(--sc-shell-border)
   );
   --muted-foreground: var(--sc-shell-muted-foreground);
-  --accent: var(--sc-shell-action);
-  --accent-foreground: var(--sc-shell-action-foreground);
+  --accent: color-mix(
+    in srgb,
+    var(--sc-shell-surface) 64%,
+    var(--sc-shell-border)
+  );
+  --accent-foreground: var(--sc-shell-foreground);
   --border: var(--sc-shell-border);
   --input: var(--sc-shell-border);
   --ring: var(--sc-shell-action);
@@ -131,6 +135,11 @@
   min-width: 44px;
   min-height: 44px;
   border-radius: var(--sc-corner-round);
+}
+
+.sc-shell .sc-account-control {
+  min-width: 44px;
+  min-height: 44px;
 }
 
 .sc-touch-target {
