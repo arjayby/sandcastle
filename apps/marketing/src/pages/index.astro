@@ -3,20 +3,14 @@ import Footer from "../components/Footer.astro";
 import Header from "../components/Header.astro";
 import Hero from "../components/Hero.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
-
-const productOrigin = (import.meta.env.PUBLIC_PRODUCT_URL ?? "http://localhost:5173").replace(
-  /\/$/,
-  "",
-);
-const productUrl = `${productOrigin}/`;
-const signInUrl = `${productOrigin}/dashboard?mode=sign-in`;
+import { productLinks } from "../lib/product-links";
 ---
 
 <BaseLayout
   title="Sandcastle"
   description="Create a complete, coherent Brand System with an expert AI Brand Agent."
 >
-  <Header productUrl={productUrl} signInUrl={signInUrl} />
-  <Hero productUrl={productUrl} />
-  <Footer productUrl={productUrl} />
+  <Header productUrl={productLinks.home} signInUrl={productLinks.signIn} />
+  <Hero productUrl={productLinks.home} />
+  <Footer productUrl={productLinks.home} />
 </BaseLayout>

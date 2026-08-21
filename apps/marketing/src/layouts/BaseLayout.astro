@@ -7,11 +7,22 @@ import "@sandcastle/brand/styles.css";
 import "../styles/global.css";
 
 interface Props {
+  canonicalUrl?: string;
   description: string;
+  image?: string;
+  openGraphType?: "article" | "website";
+  structuredData?: Record<string, unknown>;
   title: string;
 }
 
-const { description, title } = Astro.props;
+const {
+  canonicalUrl,
+  description,
+  image,
+  openGraphType = "website",
+  structuredData,
+  title,
+} = Astro.props;
 ---
 
 <!doctype html>
@@ -20,10 +31,23 @@ const { description, title } = Astro.props;
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
     <meta name="description" content={description} />
+    {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+    <meta property="og:type" content={openGraphType} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
+    {image && <meta property="og:image" content={image} />}
+    <meta name="twitter:card" content={image ? "summary_large_image" : "summary"} />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    {image && <meta name="twitter:image" content={image} />}
+    <link rel="alternate" type="application/rss+xml" title="Sandcastle journal" href="/rss.xml" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
     <link rel="preload" href={instrumentSerifUrl} as="font" type="font/woff2" crossorigin />
     <link rel="preload" href={interUrl} as="font" type="font/woff2" crossorigin />
     <link rel="preload" href={geistMonoUrl} as="font" type="font/woff2" crossorigin />
     <title>{title}</title>
+    {structuredData && <script is:inline type="application/ld+json" set:html={JSON.stringify(structuredData)} />}
   </head>
   <body class="sc-shell min-h-screen">
     <slot />

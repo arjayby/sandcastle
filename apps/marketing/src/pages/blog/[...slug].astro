@@ -1,0 +1,84 @@
+---
+import { render, type CollectionEntry } from "astro:content";
+
+import Footer from "../../components/Footer.astro";
+import Header from "../../components/Header.astro";
+import { approvedMdxComponents } from "../../components/mdx/approved-components";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getBlogArticles } from "../../lib/blog";
+import { productLinks } from "../../lib/product-links";
+
+export async function getStaticPaths() {
+  const articles = await getBlogArticles({
+    includeDrafts: !import.meta.env.PROD,
+  });
+
+  return articles.map((article) => ({
+    params: { slug: article.id },
+    props: { article },
+  }));
+}
+
+interface Props {
+  article: CollectionEntry<"blog">;
+}
+
+const { article } = Astro.props;
+const { Content } = await render(article);
+const { data } = article;
+const pageTitle = `${data.title} | Sandcastle`;
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  headline: data.title,
+  description: data.description,
+  image: data.socialImage,
+  datePublished: data.publicationDate.toISOString(),
+  ...(data.updateDate ? { dateModified: data.updateDate.toISOString() } : {}),
+  author: { "@type": "Organization", name: data.author },
+  mainEntityOfPage: data.canonicalUrl,
+};
+---
+
+<BaseLayout
+  canonicalUrl={data.canonicalUrl}
+  description={data.description}
+  image={data.socialImage}
+  openGraphType="article"
+  structuredData={structuredData}
+  title={pageTitle}
+>
+  <Header productUrl={productLinks.home} signInUrl={productLinks.signIn} />
+  <main>
+    <article class="mx-auto max-w-3xl px-5 py-14 sm:px-8 sm:py-20">
+      <nav aria-label="Breadcrumb">
+        <a class="quiet-link" href="/blog/">← All articles</a>
+      </nav>
+      <header class="mt-10 border-b border-[var(--sc-color-sand)] pb-10">
+        <p class="technical-label">{data.category}</p>
+        <h1 class="marketing-heading mt-4 text-5xl leading-[1.02] tracking-[-0.035em] sm:text-6xl">
+          {data.title}
+        </h1>
+        <p class="mt-6 text-xl leading-8 text-[var(--sc-color-muted)]">{data.description}</p>
+        <div class="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm text-[var(--sc-color-muted)]">
+          <span>{data.author}</span>
+          <time datetime={data.publicationDate.toISOString()}>
+            {data.publicationDate.toLocaleDateString("en", { dateStyle: "long" })}
+          </time>
+          {data.updateDate && (
+            <span>
+              Updated <time datetime={data.updateDate.toISOString()}>{data.updateDate.toLocaleDateString("en", { dateStyle: "long" })}</time>
+            </span>
+          )}
+        </div>
+        <ul aria-label="Article tags" class="mt-5 flex flex-wrap gap-2">
+          {data.tags.map((tag) => <li class="system-chip">{tag}</li>)}
+        </ul>
+      </header>
+      <div class="article-body mt-10">
+        <Content components={approvedMdxComponents} />
+      </div>
+    </article>
+  </main>
+  <Footer productUrl={productLinks.home} />
+</BaseLayout>
