@@ -1,0 +1,25 @@
+---
+interface Props {
+  productUrl: string;
+}
+
+const { productUrl } = Astro.props;
+---
+
+<section class="collaboration-section">
+  <div class="mx-auto grid max-w-7xl gap-10 px-5 py-20 sm:px-8 sm:py-28 lg:grid-cols-2 lg:items-center">
+    <div>
+      <p class="eyebrow text-[#c9d2df]">Expert collaboration, clear direction</p>
+      <h2 class="marketing-heading mt-4 max-w-2xl text-4xl leading-tight sm:text-5xl">
+        The Brand Agent brings the craft. You remain the director.
+      </h2>
+    </div>
+    <div class="max-w-xl lg:justify-self-end">
+      <p class="text-lg leading-8 text-[#c9d2df]">
+        Your Brand Agent turns intent into a coherent system and explains the choices.
+        You set the ambition, respond in your own language, and decide what is ready to ship.
+      </p>
+      <a class="action-link mt-8" href={productUrl}>Build your Brand System</a>
+    </div>
+  </div>
+</section>

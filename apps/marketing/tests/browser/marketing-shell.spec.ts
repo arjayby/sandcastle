@@ -1,5 +1,67 @@
 import { expect, test } from "@playwright/test";
 
+test("a Brand Builder can open the public Brand Brief from the hero", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  const action = page
+    .getByRole("main")
+    .getByRole("link", { name: "Build your Brand System" })
+    .first();
+  const productUrl = await action.getAttribute("href");
+
+  if (!productUrl) {
+    throw new Error("The hero action must have a product URL");
+  }
+  expect(new URL(productUrl).pathname).toBe("/new");
+
+  await page.route(productUrl, async (route) => {
+    await route.fulfill({
+      contentType: "text/html",
+      body: "<title>Brand Brief</title><h1>Start your Brand Brief</h1>",
+    });
+  });
+  await action.click();
+
+  await expect(page).toHaveURL(productUrl);
+  await expect(
+    page.getByRole("heading", { name: "Start your Brand Brief" }),
+  ).toBeVisible();
+});
+
+test("a Brand Builder can move from the hero to a complete example Brand System", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  await page
+    .getByRole("main")
+    .getByRole("link", { name: "View an example" })
+    .click();
+
+  await expect(page).toHaveURL(/#example$/);
+  const example = page.locator("#example");
+  await expect(
+    example.getByRole("heading", {
+      name: "The complete Northstar Brand System",
+    }),
+  ).toBeVisible();
+
+  for (const region of [
+    "Logo",
+    "Color",
+    "Typography",
+    "Voice and tone",
+    "Photography",
+    "Motion",
+    "Interface foundation",
+    "Design Tokens",
+  ]) {
+    await expect(example.getByRole("heading", { name: region })).toBeVisible();
+  }
+});
+
 test("the marketing shell supports phone and desktop visitors", async ({
   page,
 }) => {
