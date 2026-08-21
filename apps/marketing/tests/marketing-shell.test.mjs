@@ -30,7 +30,7 @@ test("marketing actions cross into the product without Brand Brief data", () => 
     ([, href]) => new URL(href),
   );
 
-  assert.ok(productLinks.some(({ pathname }) => pathname === "/"));
+  assert.ok(productLinks.some(({ pathname }) => pathname === "/new"));
   assert.ok(
     productLinks.some(
       ({ pathname, searchParams }) =>

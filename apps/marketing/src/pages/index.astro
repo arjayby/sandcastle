@@ -1,14 +1,16 @@
 ---
+import BrandSystemExample from "../components/BrandSystemExample.astro";
+import Collaboration from "../components/Collaboration.astro";
 import Footer from "../components/Footer.astro";
 import Header from "../components/Header.astro";
 import Hero from "../components/Hero.astro";
+import Workflow from "../components/Workflow.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 
-const productOrigin = (import.meta.env.PUBLIC_PRODUCT_URL ?? "http://localhost:5173").replace(
-  /\/$/,
-  "",
-);
-const productUrl = `${productOrigin}/`;
+const productOrigin = (
+  import.meta.env.PUBLIC_PRODUCT_URL ?? "http://localhost:5173"
+).replace(/\/$/, "");
+const productUrl = `${productOrigin}/new`;
 const signInUrl = `${productOrigin}/dashboard?mode=sign-in`;
 ---
 
@@ -17,6 +19,11 @@ const signInUrl = `${productOrigin}/dashboard?mode=sign-in`;
   description="Create a complete, coherent Brand System with an expert AI Brand Agent."
 >
   <Header productUrl={productUrl} signInUrl={signInUrl} />
-  <Hero productUrl={productUrl} />
+  <main>
+    <Hero productUrl={productUrl} />
+    <BrandSystemExample />
+    <Workflow />
+    <Collaboration productUrl={productUrl} />
+  </main>
   <Footer productUrl={productUrl} />
 </BaseLayout>
