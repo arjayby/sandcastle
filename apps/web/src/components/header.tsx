@@ -14,7 +14,7 @@ export default function Header() {
           <Link
             aria-label="Sandcastle home"
             className="sc-home-link flex min-h-11 items-center gap-2"
-            to="/"
+            to="/new"
           >
             <img
               alt=""

@@ -38,7 +38,7 @@ function DashboardContent() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Link to="/" className={buttonVariants()}>
+            <Link to="/new" className={buttonVariants()}>
               Create Brand Project
             </Link>
             <UserMenu />
