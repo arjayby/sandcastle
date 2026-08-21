@@ -76,7 +76,7 @@ function CreateBrandProject() {
           </EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
-          <Button onClick={() => navigate({ to: "/" })}>
+          <Button onClick={() => navigate({ to: "/new" })}>
             Start a Brand Brief
           </Button>
         </EmptyContent>
