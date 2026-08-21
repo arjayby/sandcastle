@@ -350,8 +350,8 @@ function RegionDetails({
     case "color":
       return (
         <ul className="mt-4 flex flex-col gap-2 text-xs">
-          {region.content.palette.map((color, index) => {
-            const foreground = getPaletteForeground(index, brandInk);
+          {region.content.palette.map((color) => {
+            const foreground = getPaletteForeground(color.role, brandInk);
             const contrast = getCommonTextContrast(color.value, foreground);
             return (
               <li key={color.name} className="grid grid-cols-[1fr_auto] gap-3">

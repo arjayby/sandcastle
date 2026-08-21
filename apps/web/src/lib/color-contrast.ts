@@ -32,6 +32,9 @@ export function getCommonTextContrast(background: string, foreground: string) {
   };
 }
 
-export function getPaletteForeground(index: number, brandInk: string) {
-  return index === 0 || index === 3 ? "#FFFFFF" : brandInk;
+export function getPaletteForeground(role: string, brandInk: string) {
+  const normalizedRole = role.trim().toLowerCase();
+  return normalizedRole === "foundation" || normalizedRole === "accent"
+    ? "#FFFFFF"
+    : brandInk;
 }

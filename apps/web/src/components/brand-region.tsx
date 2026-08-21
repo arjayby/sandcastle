@@ -95,8 +95,8 @@ function ColorRegion({
     <div className="flex h-full flex-col bg-[var(--brand-surface)] p-7">
       <RegionLabel region={region} />
       <div className="mt-6 flex flex-1 gap-2">
-        {region.content.palette.map((color, index) => {
-          const foreground = getPaletteForeground(index, brandInk);
+        {region.content.palette.map((color) => {
+          const foreground = getPaletteForeground(color.role, brandInk);
           const contrast = getCommonTextContrast(color.value, foreground);
           return (
             <div
