@@ -1,33 +1,23 @@
 import { expect, test } from "@playwright/test";
 
-async function createReadyBrandProject(page: import("@playwright/test").Page) {
-  const runId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+import { createReadyBrandProject } from "./helpers/brand-project";
 
-  await page.goto("/");
-  await page.getByLabel("Company name").fill(`Accessible ${runId}`);
-  await page
-    .getByLabel("Description")
-    .fill("A planning tool for independent product teams.");
-  await page.getByRole("button", { name: "Generate" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Create your account" }),
-  ).toBeVisible();
-  await page.getByLabel("Name").fill("Accessible Owner");
-  await page.getByLabel("Email").fill(`accessible-${runId}@example.com`);
-  await page.getByLabel("Password").fill("sandcastle-test-password");
-  await page.getByRole("button", { name: "Sign Up" }).click();
-  await expect(page).toHaveURL(/\/projects\/(?!new$)[a-z0-9]+$/);
-  await expect(
-    page
-      .getByRole("region", { name: "Design Tokens Brand Region" })
-      .getByText("Ready for production"),
-  ).toBeVisible({ timeout: 30_000 });
+async function openAccessibleBrandProject(
+  page: import("@playwright/test").Page,
+) {
+  const runId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  await createReadyBrandProject(page, {
+    companyName: `Accessible ${runId}`,
+    description: "A planning tool for independent product teams.",
+    ownerName: "Accessible Owner",
+    ownerEmail: `accessible-${runId}@example.com`,
+  });
 }
 
 test("keyboard focus enters and leaves a Brand Region inspector logically", async ({
   page,
 }) => {
-  await createReadyBrandProject(page);
+  await openAccessibleBrandProject(page);
 
   const inspectColor = page.getByRole("button", {
     name: "Inspect Color Brand Region",
@@ -61,13 +51,16 @@ test("keyboard focus enters and leaves a Brand Region inspector logically", asyn
 test("editor chrome, generation state, contrast guidance, and motion preferences are clear", async ({
   page,
 }) => {
-  await createReadyBrandProject(page);
+  await openAccessibleBrandProject(page);
 
   const toolbar = page.getByRole("toolbar", {
     name: "Brand Canvas controls",
   });
   await expect(toolbar).toHaveCSS("background-color", "rgb(32, 32, 30)");
   await expect(toolbar).toHaveCSS("color", "rgb(247, 244, 237)");
+  await expect(
+    toolbar.getByRole("link", { name: "All Brand Projects" }),
+  ).toHaveCSS("border-color", "rgb(112, 109, 102)");
 
   await expect(
     page.getByRole("status", { name: "Color generation state: Ready" }),
@@ -77,9 +70,7 @@ test("editor chrome, generation state, contrast guidance, and motion preferences
     .getByRole("button", { name: "Inspect Color Brand Region" })
     .click();
   await expect(
-    page.getByText(
-      "Contrast warning: does not meet common text contrast thresholds.",
-    ),
+    page.getByText(/Contrast warning: #D57658 with #FFFFFF has a .* ratio/),
   ).toBeVisible();
 
   const viewport = page.getByRole("application", {
@@ -90,10 +81,8 @@ test("editor chrome, generation state, contrast guidance, and motion preferences
   await expect(viewport).toBeFocused();
   await expect(viewport).toHaveCSS("outline-style", "solid");
   await expect(viewport).toHaveCSS("outline-width", "3px");
-  await expect(viewport).toHaveCSS(
-    "background-repeat",
-    Array.from({ length: 7 }, () => "no-repeat").join(", "),
-  );
+  await expect(viewport).toHaveCSS("background-repeat", "no-repeat");
+  await expect(viewport).toHaveCSS("background-size", "cover");
 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect(page.locator(".brand-motion-orbit")).toHaveCSS(

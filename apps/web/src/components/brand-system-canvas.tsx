@@ -51,6 +51,10 @@ import {
   getValidatedDirectionName,
   type ProgressiveGenerationData,
 } from "@/lib/brand-system";
+import {
+  getCommonTextContrast,
+  getPaletteForeground,
+} from "@/lib/color-contrast";
 
 const CANVAS_PADDING = 48;
 const MIN_SCALE = 0.25;
@@ -307,9 +311,11 @@ function SemanticRevisionForm({
 function RegionDetails({
   region,
   projectName,
+  brandInk,
 }: {
   region: BrandRegion;
   projectName: string;
+  brandInk: string;
 }) {
   switch (region.id) {
     case "logo": {
@@ -344,32 +350,38 @@ function RegionDetails({
     case "color":
       return (
         <ul className="mt-4 flex flex-col gap-2 text-xs">
-          {region.content.palette.map((color) => (
-            <li key={color.name} className="grid grid-cols-[1fr_auto] gap-3">
-              <span>
-                <strong>{color.name}</strong> · {color.role}
-                <span className="block text-muted-foreground">
-                  {color.usage}
+          {region.content.palette.map((color, index) => {
+            const foreground = getPaletteForeground(index, brandInk);
+            const contrast = getCommonTextContrast(color.value, foreground);
+            return (
+              <li key={color.name} className="grid grid-cols-[1fr_auto] gap-3">
+                <span>
+                  <strong>{color.name}</strong> · {color.role}
+                  <span className="block text-muted-foreground">
+                    {color.usage}
+                  </span>
+                  {contrast.passes ? (
+                    <span className="mt-1 block text-muted-foreground">
+                      {color.value} with {foreground} meets common text contrast
+                      at {contrast.ratio.toFixed(2)}:1.
+                    </span>
+                  ) : (
+                    <span className="mt-1 block font-semibold text-foreground">
+                      Contrast warning: {color.value} with {foreground} has a{" "}
+                      {contrast.ratio.toFixed(2)}:1 ratio, below 4.5:1 for
+                      common text.
+                    </span>
+                  )}
                 </span>
-                {color.contrast === "warning" ? (
-                  <span className="mt-1 block font-semibold text-foreground">
-                    Contrast warning: does not meet common text contrast
-                    thresholds.
-                  </span>
-                ) : (
-                  <span className="mt-1 block text-muted-foreground">
-                    Meets common text contrast thresholds.
-                  </span>
-                )}
-              </span>
-              <CopyArtifactButton
-                label={`Copy ${color.name} color value`}
-                value={color.value}
-              >
-                <span className="font-mono uppercase">{color.value}</span>
-              </CopyArtifactButton>
-            </li>
-          ))}
+                <CopyArtifactButton
+                  label={`Copy ${color.name} color value`}
+                  value={color.value}
+                >
+                  <span className="font-mono uppercase">{color.value}</span>
+                </CopyArtifactButton>
+              </li>
+            );
+          })}
         </ul>
       );
     case "typography":
@@ -1224,6 +1236,7 @@ export default function BrandSystemCanvas({
             <BrandRegionCard
               key={region.id}
               region={region}
+              brandInk={brandSystem.theme.ink}
               isSelected={region.id === selectedRegionId}
               onSelect={(event) => selectRegion(region, event)}
               onRetry={
@@ -1261,7 +1274,11 @@ export default function BrandSystemCanvas({
             <p className="mt-3 text-muted-foreground text-sm">
               {selectedRegion.summary}
             </p>
-            <RegionDetails region={selectedRegion} projectName={projectName} />
+            <RegionDetails
+              region={selectedRegion}
+              projectName={projectName}
+              brandInk={brandSystem.theme.ink}
+            />
             <Separator className="my-5" />
             <ul className="flex list-disc flex-col gap-3 pl-4 text-sm leading-relaxed">
               {selectedRegion.rules.map((rule) => (

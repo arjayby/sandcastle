@@ -5,6 +5,10 @@ import { FocusIcon, RotateCcwIcon } from "lucide-react";
 import type { CSSProperties, MouseEvent } from "react";
 
 import type { BrandRegion } from "@/lib/brand-system";
+import {
+  getCommonTextContrast,
+  getPaletteForeground,
+} from "@/lib/color-contrast";
 
 const generationStateLabels: Record<BrandRegion["state"], string> = {
   unfinished: "Unfinished",
@@ -13,6 +17,11 @@ const generationStateLabels: Record<BrandRegion["state"], string> = {
   revising: "Revising",
   failed: "Failed",
 };
+
+function regionStateLabel(region: BrandRegion) {
+  const stateName = generationStateLabels[region.state];
+  return `${region.name} ${region.state === "revising" ? "revision" : "generation"} state: ${stateName}`;
+}
 
 function RegionLabel({ region }: { region: BrandRegion }) {
   return (
@@ -27,7 +36,7 @@ function RegionLabel({ region }: { region: BrandRegion }) {
       </div>
       <span
         role="status"
-        aria-label={`${region.name} generation state: ${generationStateLabels[region.state]}`}
+        aria-label={regionStateLabel(region)}
         aria-live="polite"
         className="rounded-full bg-[var(--brand-aloe)]/40 px-2.5 py-1 font-medium text-[10px] text-[var(--brand-ink)] uppercase tracking-wide"
       >
@@ -77,32 +86,34 @@ function LogoRegion({
 
 function ColorRegion({
   region,
+  brandInk,
 }: {
   region: Extract<BrandRegion, { id: "color" }>;
+  brandInk: string;
 }) {
   return (
     <div className="flex h-full flex-col bg-[var(--brand-surface)] p-7">
       <RegionLabel region={region} />
       <div className="mt-6 flex flex-1 gap-2">
-        {region.content.palette.map((color, index) => (
-          <div
-            key={color.name}
-            className="flex min-w-0 flex-1 flex-col justify-end p-2"
-            style={{
-              backgroundColor: color.value,
-              color:
-                index === 0 || index === 3 ? "#ffffff" : "var(--brand-ink)",
-            }}
-          >
-            <strong className="text-[10px]">{color.name}</strong>
-            <span className="text-[9px] opacity-80">{color.value}</span>
-            <span className="text-[9px] opacity-80">
-              {color.contrast === "warning"
-                ? "Contrast warning"
-                : "Contrast pass"}
-            </span>
-          </div>
-        ))}
+        {region.content.palette.map((color, index) => {
+          const foreground = getPaletteForeground(index, brandInk);
+          const contrast = getCommonTextContrast(color.value, foreground);
+          return (
+            <div
+              key={color.name}
+              className="flex min-w-0 flex-1 flex-col justify-end p-2"
+              style={{ backgroundColor: color.value, color: foreground }}
+            >
+              <strong className="text-[10px]">{color.name}</strong>
+              <span className="text-[9px] opacity-80">{color.value}</span>
+              <span className="text-[9px] opacity-80">
+                {contrast.passes
+                  ? `Contrast pass · ${contrast.ratio.toFixed(2)}:1`
+                  : `Contrast warning · ${contrast.ratio.toFixed(2)}:1`}
+              </span>
+            </div>
+          );
+        })}
       </div>
       <p className="mt-4 text-[var(--brand-muted)] text-xs">{region.summary}</p>
     </div>
@@ -169,7 +180,7 @@ function VoiceRegion({
         <span>Voice and Tone</span>
         <span
           role="status"
-          aria-label={`${region.name} generation state: ${generationStateLabels[region.state]}`}
+          aria-label={regionStateLabel(region)}
           aria-live="polite"
           className="rounded-full bg-white/10 px-2.5 py-1"
         >
@@ -394,11 +405,11 @@ function DesignTokensRegion({
           <span>CSS · JSON</span>
           <span
             role="status"
-            aria-label={`${region.name} generation state: ${
+            aria-label={
               region.state === "ready"
-                ? "Ready for production"
-                : generationStateLabels[region.state]
-            }`}
+                ? `${region.name} generation state: Ready for production`
+                : regionStateLabel(region)
+            }
             aria-live="polite"
           >
             {region.state === "ready"
@@ -426,7 +437,13 @@ function DesignTokensRegion({
   );
 }
 
-function BrandRegionContent({ region }: { region: BrandRegion }) {
+function BrandRegionContent({
+  region,
+  brandInk,
+}: {
+  region: BrandRegion;
+  brandInk: string;
+}) {
   if (region.id === "photography" && region.content.photographs.length > 0) {
     return <PhotographyRegion region={region} />;
   }
@@ -439,7 +456,7 @@ function BrandRegionContent({ region }: { region: BrandRegion }) {
     case "logo":
       return <LogoRegion region={region} />;
     case "color":
-      return <ColorRegion region={region} />;
+      return <ColorRegion region={region} brandInk={brandInk} />;
     case "typography":
       return <TypographyRegion region={region} />;
     case "voice-and-tone":
@@ -460,11 +477,13 @@ export default function BrandRegionCard({
   isSelected,
   onSelect,
   onRetry,
+  brandInk,
 }: {
   region: BrandRegion;
   isSelected: boolean;
   onSelect: (event: MouseEvent<HTMLElement>) => void;
   onRetry?: () => void;
+  brandInk: string;
 }) {
   const style: CSSProperties = {
     left: region.frame.x,
@@ -506,7 +525,7 @@ export default function BrandRegionCard({
           Retry {region.name}
         </Button>
       ) : null}
-      <BrandRegionContent region={region} />
+      <BrandRegionContent region={region} brandInk={brandInk} />
     </section>
   );
 }
