@@ -32,3 +32,8 @@ export async function createReadyBrandProject(
       .getByText("Ready for production"),
   ).toBeVisible({ timeout: 30_000 });
 }
+
+export async function signOut(page: Page) {
+  await page.getByRole("button", { name: "Account controls" }).click();
+  await page.getByRole("menuitem", { name: "Sign Out" }).click();
+}

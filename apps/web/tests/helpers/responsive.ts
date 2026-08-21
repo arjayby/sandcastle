@@ -16,3 +16,23 @@ export async function expectBottomSheet(inspector: Locator, viewport: Locator) {
     viewportBox.y + viewportBox.height * 0.35,
   );
 }
+
+export async function expectFullScreenInspector(
+  inspector: Locator,
+  viewport: Locator,
+) {
+  const [viewportBox, inspectorBox] = await Promise.all([
+    viewport.boundingBox(),
+    inspector.boundingBox(),
+  ]);
+  expect(viewportBox).not.toBeNull();
+  expect(inspectorBox).not.toBeNull();
+  if (!(viewportBox && inspectorBox)) {
+    return;
+  }
+
+  expect(inspectorBox.x).toBeCloseTo(viewportBox.x, 0);
+  expect(inspectorBox.y).toBeCloseTo(viewportBox.y, 0);
+  expect(inspectorBox.width).toBeCloseTo(viewportBox.width, 0);
+  expect(inspectorBox.height).toBeCloseTo(viewportBox.height, 0);
+}

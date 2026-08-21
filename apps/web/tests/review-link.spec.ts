@@ -5,7 +5,7 @@ import type { Id } from "@sandcastle/backend/convex/_generated/dataModel.js";
 import { ConvexHttpClient } from "convex/browser";
 import { loadEnv } from "vite";
 
-import { expectBottomSheet } from "./helpers/responsive";
+import { expectFullScreenInspector } from "./helpers/responsive";
 
 const convexUrl = loadEnv(
   "development",
@@ -74,7 +74,7 @@ test("a Brand Builder can share and revoke an accountless read only Review Link"
     reviewerPage.getByRole("button", { name: "Share Review Link" }),
   ).toHaveCount(0);
   await expect(
-    reviewerPage.getByRole("button", { name: "Sign out" }),
+    reviewerPage.getByRole("button", { name: "Account controls" }),
   ).toHaveCount(0);
   await expect(
     reviewerPage.getByRole("button", {
@@ -99,7 +99,7 @@ test("a Brand Builder can share and revoke an accountless read only Review Link"
   const inspector = reviewerPage.getByRole("complementary", {
     name: "Brand Region inspector",
   });
-  await expectBottomSheet(
+  await expectFullScreenInspector(
     inspector,
     reviewerPage.getByRole("application", {
       name: "Brand Canvas viewport",

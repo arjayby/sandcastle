@@ -13,7 +13,6 @@ import { useMutation, useQuery } from "convex/react";
 import BrandCanvas from "@/components/brand-canvas";
 import BrandSystemCanvas from "@/components/brand-system-canvas";
 import ReviewLinkDialog from "@/components/review-link-dialog";
-import { authClient } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/_auth/projects/$projectId")({
   component: BrandProjectPage,
@@ -81,7 +80,7 @@ function BrandProjectPage() {
       onLoadBuiltInFallback={() =>
         loadBuiltInFallback({ projectId: brandProjectId })
       }
-      onSignOut={() => authClient.signOut()}
+      showProjectNavigation
       toolbarAction={
         <ReviewLinkDialog
           projectId={brandProjectId}

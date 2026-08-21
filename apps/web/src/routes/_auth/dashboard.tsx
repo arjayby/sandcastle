@@ -12,7 +12,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { usePaginatedQuery } from "convex/react";
 
 import BrandProjectCard from "@/components/brand-project-card";
-import UserMenu from "@/components/user-menu";
 
 export const Route = createFileRoute("/_auth/dashboard")({
   component: DashboardContent,
@@ -37,12 +36,9 @@ function DashboardContent() {
               Reopen a Brand Project or begin another brief.
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Link to="/new" className={buttonVariants()}>
-              Create Brand Project
-            </Link>
-            <UserMenu />
-          </div>
+          <Link to="/new" className={buttonVariants()}>
+            Create Brand Project
+          </Link>
         </div>
 
         {isLoadingProjects ? (

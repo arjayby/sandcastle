@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { signOut } from "./helpers/brand-project";
+
 test("a Brand Builder can apply regional and complete Semantic Revisions coherently", async ({
   page,
 }) => {
@@ -114,7 +116,7 @@ test("a Brand Builder can apply regional and complete Semantic Revisions coheren
 
   await page.reload();
   await expect(redo).toBeEnabled();
-  await page.getByRole("button", { name: "Sign out" }).click();
+  await signOut(page);
   await expect(
     page.getByRole("heading", { name: "Create your account" }),
   ).toBeVisible();

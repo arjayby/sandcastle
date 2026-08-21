@@ -16,7 +16,6 @@ import {
   CopyIcon,
   DownloadIcon,
   FocusIcon,
-  LogOutIcon,
   type LucideIcon,
   MinusIcon,
   PackageOpenIcon,
@@ -88,7 +87,7 @@ type PinchState = {
 };
 
 const INSPECTOR_CLASS_NAME =
-  "editor-chrome absolute right-3 bottom-3 left-3 max-h-[55%] overflow-auto border bg-background p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-xl lg:top-3 lg:bottom-3 lg:left-auto lg:max-h-none lg:w-80 lg:pb-5";
+  "editor-chrome absolute inset-0 overflow-auto border bg-background p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-xl md:top-auto md:right-3 md:bottom-3 md:left-3 md:max-h-[55%] lg:top-3 lg:left-auto lg:max-h-none lg:w-80 lg:pb-5";
 
 const brandRegionNames: Record<BrandRegion["id"], string> = {
   logo: "Logo",
@@ -580,7 +579,7 @@ export default function BrandSystemCanvas({
   onUndo,
   onRedo,
   onLoadBuiltInFallback,
-  onSignOut,
+  showProjectNavigation = false,
   toolbarAction,
 }: {
   projectName: string;
@@ -593,7 +592,7 @@ export default function BrandSystemCanvas({
   onUndo?: () => Promise<unknown>;
   onRedo?: () => Promise<unknown>;
   onLoadBuiltInFallback?: () => Promise<unknown>;
-  onSignOut?: () => void;
+  showProjectNavigation?: boolean;
   toolbarAction?: React.ReactNode;
 }) {
   const brandSystem = useMemo(
@@ -1016,7 +1015,6 @@ export default function BrandSystemCanvas({
     <main
       className="brand-canvas-shell grid h-full min-h-0 min-w-0 grid-rows-[auto_1fr]"
       aria-label="Brand Canvas"
-      style={brandThemeStyle}
     >
       <link rel="stylesheet" href={typographyRegion.content.stylesheetUrl} />
       <header
@@ -1024,7 +1022,7 @@ export default function BrandSystemCanvas({
         aria-label="Brand Canvas controls"
         className="editor-chrome flex min-h-16 min-w-0 flex-wrap items-center gap-1 border-b bg-background px-3 py-2 text-foreground lg:flex-nowrap lg:gap-3 lg:px-4"
       >
-        {onSignOut ? (
+        {showProjectNavigation ? (
           <>
             <Link
               to="/dashboard"
@@ -1137,16 +1135,6 @@ export default function BrandSystemCanvas({
             <span className="hidden lg:inline">Fit</span>
           </Button>
         </div>
-        {onSignOut ? (
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Sign out"
-            onClick={onSignOut}
-          >
-            <LogOutIcon />
-          </Button>
-        ) : null}
       </header>
 
       <div
@@ -1156,6 +1144,7 @@ export default function BrandSystemCanvas({
         aria-describedby="canvas-instructions"
         // biome-ignore lint/a11y/noNoninteractiveTabindex: The spatial viewport needs keyboard pan and zoom controls.
         tabIndex={0}
+        style={{ backgroundColor: brandSystem.theme.paper }}
         className={cn(
           "brand-paper relative min-h-0 touch-none overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
           isPanning ? "cursor-grabbing" : "cursor-grab",
@@ -1227,6 +1216,7 @@ export default function BrandSystemCanvas({
           aria-label="Brand System board"
           className="absolute origin-top-left"
           style={{
+            ...brandThemeStyle,
             width: brandSystem.board.width,
             height: brandSystem.board.height,
             transform: `translate3d(${transform.x}px, ${transform.y}px, 0) scale(${transform.scale})`,
