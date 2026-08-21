@@ -3,6 +3,6 @@ const productOrigin = (
 ).replace(/\/$/, "");
 
 export const productLinks = {
-  home: `${productOrigin}/`,
+  brandBrief: `${productOrigin}/new`,
   signIn: `${productOrigin}/dashboard?mode=sign-in`,
 };

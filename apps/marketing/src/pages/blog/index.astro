@@ -12,7 +12,7 @@ const articles = await getBlogArticles();
   title="Brand building articles | Sandcastle"
   description="Practical articles about creating and maintaining a coherent Brand System."
 >
-  <Header productUrl={productLinks.home} signInUrl={productLinks.signIn} />
+  <Header productUrl={productLinks.brandBrief} signInUrl={productLinks.signIn} />
   <main class="mx-auto min-h-[70vh] max-w-5xl px-5 py-16 sm:px-8 sm:py-24">
     <p class="eyebrow">Sandcastle journal</p>
     <h1 class="marketing-heading mt-4 text-5xl tracking-[-0.035em] sm:text-6xl">Build a coherent brand</h1>
@@ -39,5 +39,5 @@ const articles = await getBlogArticles();
       ))}
     </ol>
   </main>
-  <Footer productUrl={productLinks.home} />
+  <Footer productUrl={productLinks.brandBrief} />
 </BaseLayout>

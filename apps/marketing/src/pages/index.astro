@@ -1,7 +1,10 @@
 ---
+import BrandSystemExample from "../components/BrandSystemExample.astro";
+import Collaboration from "../components/Collaboration.astro";
 import Footer from "../components/Footer.astro";
 import Header from "../components/Header.astro";
 import Hero from "../components/Hero.astro";
+import Workflow from "../components/Workflow.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { productLinks } from "../lib/product-links";
 ---
@@ -10,7 +13,12 @@ import { productLinks } from "../lib/product-links";
   title="Sandcastle"
   description="Create a complete, coherent Brand System with an expert AI Brand Agent."
 >
-  <Header productUrl={productLinks.home} signInUrl={productLinks.signIn} />
-  <Hero productUrl={productLinks.home} />
-  <Footer productUrl={productLinks.home} />
+  <Header productUrl={productLinks.brandBrief} signInUrl={productLinks.signIn} />
+  <main>
+    <Hero productUrl={productLinks.brandBrief} />
+    <BrandSystemExample />
+    <Workflow />
+    <Collaboration productUrl={productLinks.brandBrief} />
+  </main>
+  <Footer productUrl={productLinks.brandBrief} />
 </BaseLayout>
