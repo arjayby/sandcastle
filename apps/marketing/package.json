@@ -7,7 +7,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "check-types": "astro check",
-    "test": "pnpm build && node --test tests/*.test.mjs"
+    "test": "pnpm build && node --test tests/*.test.mjs && playwright test"
   },
   "dependencies": {
     "@sandcastle/brand": "workspace:*",
@@ -17,6 +17,8 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.6",
-    "typescript": "catalog:"
+    "@playwright/test": "^1.62.1",
+    "typescript": "catalog:",
+    "vite": "^8.2.1"
   }
 }

@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-test("a visitor receives the Sandcastle marketing shell", async () => {
-  const page = await readFile(
-    new URL("../dist/index.html", import.meta.url),
-    "utf8",
-  );
+const page = await readFile(
+  new URL("../dist/index.html", import.meta.url),
+  "utf8",
+);
 
+test("a visitor receives the Sandcastle marketing shell", () => {
   assert.match(page, /<header[\s>]/);
   assert.match(page, /<main[\s>]/);
   assert.match(page, /<footer[\s>]/);
@@ -16,12 +16,7 @@ test("a visitor receives the Sandcastle marketing shell", async () => {
   assert.match(page, />Sign in</);
 });
 
-test("the static page publishes default metadata without browser JavaScript", async () => {
-  const page = await readFile(
-    new URL("../dist/index.html", import.meta.url),
-    "utf8",
-  );
-
+test("the static page publishes default metadata without browser JavaScript", () => {
   assert.match(page, /<title>Sandcastle<\/title>/);
   assert.match(
     page,
@@ -30,17 +25,18 @@ test("the static page publishes default metadata without browser JavaScript", as
   assert.doesNotMatch(page, /<script[\s>]/);
 });
 
-test("marketing actions cross into the product without Brand Brief data", async () => {
-  const page = await readFile(
-    new URL("../dist/index.html", import.meta.url),
-    "utf8",
-  );
+test("marketing actions cross into the product without Brand Brief data", () => {
   const productLinks = [...page.matchAll(/href="(https?:\/\/[^"]+)"/g)].map(
     ([, href]) => new URL(href),
   );
 
   assert.ok(productLinks.some(({ pathname }) => pathname === "/"));
-  assert.ok(productLinks.some(({ pathname }) => pathname === "/dashboard"));
+  assert.ok(
+    productLinks.some(
+      ({ pathname, searchParams }) =>
+        pathname === "/dashboard" && searchParams.get("mode") === "sign-in",
+    ),
+  );
   assert.ok(
     productLinks.every(
       ({ searchParams }) =>

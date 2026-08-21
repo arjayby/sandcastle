@@ -1,5 +1,16 @@
 import { expect, test } from "@playwright/test";
 
+test("the marketing sign in action opens the product sign in state", async ({
+  page,
+}) => {
+  await page.goto("/dashboard?mode=sign-in");
+
+  await expect(
+    page.getByRole("heading", { name: "Welcome back" }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sign In" })).toBeVisible();
+});
+
 test("the public Brand Brief presents the shared Sandcastle identity", async ({
   page,
 }) => {
