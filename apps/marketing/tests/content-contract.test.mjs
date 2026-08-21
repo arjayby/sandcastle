@@ -11,25 +11,14 @@ const temporaryArticle = new URL(
   import.meta.url,
 );
 
-test("the build rejects an article with missing metadata", async () => {
-  await writeFile(
-    temporaryArticle,
-    `---
-title: Invalid contract check
-draft: false
----
-
-This temporary entry must fail the content schema.
-`,
-  );
+async function expectBuildToReject(article, verifyError) {
+  await writeFile(temporaryArticle, article);
 
   try {
     await assert.rejects(
       execute("pnpm", ["build"], { cwd: appDirectory }),
       (error) => {
-        assert.match(error.stderr, /InvalidContentEntryDataError/);
-        assert.match(error.stderr, /description: Required/);
-        assert.match(error.stderr, /canonicalUrl: Required/);
+        verifyError(error);
         return true;
       },
     );
@@ -37,11 +26,27 @@ This temporary entry must fail the content schema.
     await rm(temporaryArticle, { force: true });
     await execute("pnpm", ["build"], { cwd: appDirectory });
   }
+}
+
+test("the build rejects an article with missing metadata", async () => {
+  await expectBuildToReject(
+    `---
+title: Invalid contract check
+draft: false
+---
+
+This temporary entry must fail the content schema.
+`,
+    (error) => {
+      assert.match(error.stderr, /InvalidContentEntryDataError/);
+      assert.match(error.stderr, /description: Required/);
+      assert.match(error.stderr, /canonicalUrl: Required/);
+    },
+  );
 });
 
 test("the build rejects duplicate article titles", async () => {
-  await writeFile(
-    temporaryArticle,
+  await expectBuildToReject(
     `---
 title: Build a Brand System that stays coherent
 description: This temporary entry must fail the collection uniqueness check.
@@ -57,18 +62,8 @@ draft: false
 
 This temporary entry must fail the collection uniqueness check.
 `,
+    (error) => {
+      assert.match(error.stderr, /Blog article titles must be unique/);
+    },
   );
-
-  try {
-    await assert.rejects(
-      execute("pnpm", ["build"], { cwd: appDirectory }),
-      (error) => {
-        assert.match(error.stderr, /Blog article titles must be unique/);
-        return true;
-      },
-    );
-  } finally {
-    await rm(temporaryArticle, { force: true });
-    await execute("pnpm", ["build"], { cwd: appDirectory });
-  }
 });
