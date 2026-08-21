@@ -1,0 +1,21 @@
+{
+  "name": "@sandcastle/brand",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles.css": "./src/styles.css",
+    "./assets/*": "./src/assets/*",
+    "./fonts/*": "./src/fonts/*"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "test": "vitest run --config vitest.config.ts"
+  },
+  "devDependencies": {
+    "@sandcastle/config": "workspace:*",
+    "typescript": "catalog:",
+    "vitest": "^4.1.11"
+  }
+}

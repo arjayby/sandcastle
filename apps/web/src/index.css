@@ -1,5 +1,108 @@
+@import "@sandcastle/brand/styles.css";
 @import "@sandcastle/ui/globals.css";
 @source "../node_modules/streamdown/dist/*.js";
+
+.sc-app-header {
+  border-color: var(--sc-shell-border);
+  background: color-mix(in srgb, var(--sc-shell-background) 90%, transparent);
+}
+
+.sc-home-link {
+  color: var(--sc-shell-foreground);
+  text-decoration: none;
+}
+
+.sc-entry-surface {
+  background-color: var(--sc-shell-background);
+  background-image:
+    linear-gradient(var(--sc-shell-border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--sc-shell-border) 1px, transparent 1px);
+  background-position: center;
+  background-size: 64px 64px;
+}
+
+.sc-entry-intro {
+  max-width: 34rem;
+}
+
+.sc-entry-kicker {
+  color: var(--sc-shell-muted-foreground);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.sc-entry-heading {
+  max-width: 11ch;
+  font-family: var(--sc-font-display);
+  font-size: clamp(3.5rem, 8vw, 6.75rem);
+  font-weight: 400;
+  letter-spacing: -0.055em;
+  line-height: 0.86;
+}
+
+.sc-entry-copy {
+  max-width: 32rem;
+  color: var(--sc-shell-muted-foreground);
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.sc-entry-process {
+  width: fit-content;
+  border: 1px solid var(--sc-shell-border);
+  border-radius: var(--sc-corner-control);
+  background: var(--sc-shell-surface);
+  color: var(--sc-shell-foreground);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  padding: var(--sc-space-1) var(--sc-space-2);
+  transition-property: transform, background-color;
+}
+
+.sc-entry-process:hover {
+  background: color-mix(
+    in srgb,
+    var(--sc-shell-surface) 70%,
+    var(--sc-shell-action)
+  );
+  transform: translateX(var(--sc-space-1));
+}
+
+.sc-entry-card {
+  border-radius: var(--sc-corner-panel);
+  box-shadow: 0 24px 80px
+    color-mix(in srgb, var(--sc-color-ink) 14%, transparent);
+}
+
+.sc-entry-card [data-slot="card-title"] h2 {
+  font-family: var(--sc-font-display);
+  font-size: 2rem;
+  font-weight: 400;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+.sc-entry-card [data-slot="input"],
+.sc-entry-card [data-slot="textarea"],
+.sc-entry-card [data-slot="button"] {
+  border-radius: var(--sc-corner-control);
+}
+
+.sc-entry-card [data-slot="input"],
+.sc-entry-card [data-slot="button"] {
+  min-height: 44px;
+}
+
+.sc-entry-card [data-slot="button"] {
+  padding-inline: var(--sc-space-2);
+}
+
+@media (max-width: 767px) {
+  .sc-entry-surface {
+    background-size: 40px 40px;
+  }
+}
 
 .brand-paper {
   background-color: var(--brand-paper, #f2ede4);

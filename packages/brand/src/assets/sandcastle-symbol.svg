@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-labelledby="title">
+  <title id="title">Sandcastle modular symbol</title>
+  <g fill="#F4C95D">
+    <rect x="7" y="3" width="19" height="6" rx="1.5"/>
+    <rect x="3" y="8" width="9" height="8" rx="1.5"/>
+    <rect x="9" y="13" width="16" height="6" rx="1.5"/>
+    <rect x="20" y="17" width="9" height="8" rx="1.5"/>
+    <rect x="6" y="23" width="19" height="6" rx="1.5"/>
+  </g>
+</svg>
