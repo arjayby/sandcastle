@@ -18,6 +18,7 @@
     "@convex-dev/polar": "catalog:",
     "@polar-sh/checkout": "^0.4.0",
     "@sandcastle/backend": "workspace:*",
+    "@sandcastle/brand": "workspace:*",
     "@sandcastle/env": "workspace:*",
     "@sandcastle/ui": "workspace:*",
     "@stripe/react-stripe-js": "^6.8.0",

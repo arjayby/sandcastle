@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 48" role="img" aria-labelledby="title">
+  <title id="title">Sandcastle</title>
+  <g fill="#F4C95D" transform="translate(2 8) scale(1)">
+    <rect x="7" y="3" width="19" height="6" rx="1.5"/>
+    <rect x="3" y="8" width="9" height="8" rx="1.5"/>
+    <rect x="9" y="13" width="16" height="6" rx="1.5"/>
+    <rect x="20" y="17" width="9" height="8" rx="1.5"/>
+    <rect x="6" y="23" width="19" height="6" rx="1.5"/>
+  </g>
+  <g fill="none" stroke="#20201E" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25">
+    <path d="M49 13H42V23H49V33H42"/>
+    <path d="M52 23H59V33H52V28H59"/>
+    <path d="M62 33V23H69V33"/>
+    <path d="M79 13V33H72V23H79"/>
+    <path d="M89 23H82V33H89"/>
+    <path d="M92 23H99V33H92V28H99"/>
+    <path d="M109 23H102V28H109V33H102"/>
+    <path d="M115 16V33M112 23H119"/>
+    <path d="M123 13V33H128"/>
+    <path d="M138 23H131V33H138M131 28H137"/>
+  </g>
+</svg>

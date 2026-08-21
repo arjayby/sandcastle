@@ -1,3 +1,7 @@
+import sandcastleSymbolUrl from "@sandcastle/brand/assets/sandcastle-symbol.svg";
+import geistMonoUrl from "@sandcastle/brand/fonts/geist-mono-latin-wght-normal.woff2?url";
+import instrumentSerifUrl from "@sandcastle/brand/fonts/instrument-serif-latin-400-normal.woff2?url";
+import interUrl from "@sandcastle/brand/fonts/inter-latin-wght-normal.woff2?url";
 import { Toaster } from "@sandcastle/ui/components/sonner";
 import {
   createRootRouteWithContext,
@@ -18,18 +22,27 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
   head: () => ({
     meta: [
       {
-        title: "sandcastle",
+        title: "Sandcastle | Create a complete Brand System",
       },
       {
         name: "description",
-        content: "sandcastle is a web application",
+        content:
+          "Direct an expert Brand Agent and create a coherent Brand System that is ready to ship.",
       },
     ],
     links: [
       {
         rel: "icon",
-        href: "/favicon.ico",
+        href: sandcastleSymbolUrl,
+        type: "image/svg+xml",
       },
+      ...[instrumentSerifUrl, interUrl, geistMonoUrl].map((href) => ({
+        rel: "preload",
+        href,
+        as: "font",
+        type: "font/woff2",
+        crossOrigin: "anonymous" as const,
+      })),
     ],
   }),
 });
@@ -44,7 +57,7 @@ function RootComponent() {
         disableTransitionOnChange
         storageKey="vite-ui-theme"
       >
-        <div className="grid h-svh grid-rows-[auto_1fr]">
+        <div className="sc-shell grid h-svh grid-rows-[auto_1fr]">
           <Header />
           <Outlet />
         </div>
