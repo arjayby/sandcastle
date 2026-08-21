@@ -1,30 +1,55 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { rm, writeFile } from "node:fs/promises";
+import { cp, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 const execute = promisify(execFile);
-const appDirectory = new URL("..", import.meta.url);
-const temporaryArticle = new URL(
-  "../src/content/blog/invalid-contract-check.mdx",
-  import.meta.url,
-);
+const appDirectory = fileURLToPath(new URL("..", import.meta.url));
+
+async function createTestApp(article) {
+  const directory = await mkdtemp(
+    join(tmpdir(), "sandcastle-marketing-contract-"),
+  );
+
+  await Promise.all([
+    cp(join(appDirectory, "src"), join(directory, "src"), { recursive: true }),
+    cp(join(appDirectory, "public"), join(directory, "public"), {
+      recursive: true,
+    }),
+    ...["astro.config.ts", "package.json", "tsconfig.json"].map((file) =>
+      cp(join(appDirectory, file), join(directory, file)),
+    ),
+  ]);
+  await symlink(
+    join(appDirectory, "node_modules"),
+    join(directory, "node_modules"),
+    "dir",
+  );
+  await writeFile(
+    join(directory, "src/content/blog/invalid-contract-check.mdx"),
+    article,
+  );
+
+  return directory;
+}
 
 async function expectBuildToReject(article, verifyError) {
-  await writeFile(temporaryArticle, article);
+  const directory = await createTestApp(article);
 
   try {
     await assert.rejects(
-      execute("pnpm", ["build"], { cwd: appDirectory }),
+      execute("pnpm", ["exec", "astro", "build"], { cwd: directory }),
       (error) => {
         verifyError(error);
         return true;
       },
     );
   } finally {
-    await rm(temporaryArticle, { force: true });
-    await execute("pnpm", ["build"], { cwd: appDirectory });
+    await rm(directory, { force: true, recursive: true });
   }
 }
 
