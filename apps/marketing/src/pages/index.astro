@@ -1,6 +1,7 @@
 ---
 import BrandSystemExample from "../components/BrandSystemExample.astro";
 import Collaboration from "../components/Collaboration.astro";
+import DeliveryProof from "../components/DeliveryProof.astro";
 import Footer from "../components/Footer.astro";
 import Header from "../components/Header.astro";
 import Hero from "../components/Hero.astro";
@@ -18,6 +19,7 @@ import { productLinks } from "../lib/product-links";
     <Hero productUrl={productLinks.brandBrief} />
     <BrandSystemExample />
     <Workflow />
+    <DeliveryProof productUrl={productLinks.brandBrief} />
     <Collaboration productUrl={productLinks.brandBrief} />
   </main>
   <Footer productUrl={productLinks.brandBrief} />

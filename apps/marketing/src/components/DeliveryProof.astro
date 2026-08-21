@@ -1,0 +1,226 @@
+---
+interface Props {
+  productUrl: string;
+}
+
+const { productUrl } = Astro.props;
+
+const cssOutput = `:root {
+  --color-ink: #24334b;
+  --color-signal: #ee7c58;
+  --font-display: "Instrument Serif";
+  --motion-arrive: 240ms;
+}`;
+const jsonOutput = `{
+  "color.ink": "#24334b",
+  "color.signal": "#ee7c58",
+  "font.display": "Instrument Serif",
+  "motion.arrive": "240ms"
+}`;
+---
+
+<section
+  aria-label="Direct, review, and ship Northstar"
+  class="delivery-proof border-t border-[var(--sc-color-sand)]"
+>
+  <div class="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28">
+    <div class="grid gap-5 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
+      <div>
+        <p class="eyebrow">The work continues after generation</p>
+        <h2 class="marketing-heading mt-4 text-4xl leading-tight sm:text-5xl">
+          Direct it. Review it. Put it to work.
+        </h2>
+      </div>
+      <p class="max-w-2xl text-lg leading-8 text-[var(--sc-color-muted)] lg:justify-self-end">
+        Northstar stays coherent as its Brand Builder refines decisions, gathers focused
+        feedback, and moves reusable Brand Artifacts into production.
+      </p>
+    </div>
+
+    <div class="delivery-grid mt-14">
+      <article class="proof-card proof-card-revision">
+        <div class="proof-copy">
+          <p class="technical-label">Semantic Revision</p>
+          <h3 class="marketing-heading mt-3 text-3xl">Revise with intent</h3>
+          <p class="mt-4 leading-7 text-[var(--sc-color-muted)]">
+            Direct the selected Logo Brand Region, or widen the same request to the complete
+            Brand System. The Brand Agent keeps dependent decisions coherent.
+          </p>
+        </div>
+
+        <div class="product-panel mt-8" aria-label="Northstar Semantic Revision example">
+          <div class="product-panel-bar">
+            <span class="revision-region-state technical-label">Northstar · Logo selected</span>
+            <span class="revision-system-state technical-label">Northstar · Complete Brand System</span>
+            <span class="status-dot">Ready</span>
+          </div>
+          <div class="revision-body">
+            <fieldset class="revision-target">
+              <legend class="technical-label">Revision target</legend>
+              <div class="revision-options mt-3">
+                <label>
+                  <input
+                    aria-label="Selected Brand Region"
+                    checked
+                    id="revision-target-region"
+                    name="revision-target"
+                    type="radio"
+                  />
+                  <span>Selected Brand Region</span>
+                </label>
+                <label>
+                  <input
+                    aria-label="Complete Brand System"
+                    id="revision-target-system"
+                    name="revision-target"
+                    type="radio"
+                  />
+                  <span>Complete Brand System</span>
+                </label>
+              </div>
+            </fieldset>
+            <div class="revision-message mt-5">
+              <p class="technical-label text-[#8f9db1]">Brand Builder</p>
+              <p class="mt-2 font-medium">Make the signal feel warmer without losing its authority.</p>
+            </div>
+            <div class="revision-result mt-3">
+              <p class="technical-label text-[#667085]">Brand Agent</p>
+              <p class="mt-2 text-sm leading-6">
+                Signal shifts toward warm coral. Ink and typography stay unchanged to preserve
+                Northstar’s calm authority.
+              </p>
+            </div>
+            <div class="revision-system-message mt-5">
+              <p class="technical-label text-[#8f9db1]">Brand Builder</p>
+              <p class="mt-2 font-medium">
+                Make every touchpoint feel more exploratory while keeping Northstar calm.
+              </p>
+            </div>
+            <div class="revision-system-result mt-3">
+              <p class="technical-label text-[#667085]">Brand Agent</p>
+              <p class="mt-2 text-sm leading-6">
+                Wider horizons now shape photography, motion opens with more space, and voice
+                favors active discovery. Ink and Signal keep the system recognizably Northstar.
+              </p>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="proof-card proof-card-review">
+        <div class="proof-copy">
+          <p class="technical-label">Review Link</p>
+          <h3 class="marketing-heading mt-3 text-3xl">Review without editing</h3>
+          <p class="mt-4 leading-7 text-[var(--sc-color-muted)]">
+            Share a private, revocable Review Link. Reviewers can inspect the Northstar Brand
+            Canvas and leave the Brand System untouched.
+          </p>
+        </div>
+
+        <div class="product-panel mt-8" aria-label="Northstar read only review example">
+          <div class="product-panel-bar">
+            <span class="technical-label">Northstar Brand Canvas</span>
+            <span class="readonly-badge">Review Link · Read only</span>
+          </div>
+          <div class="review-canvas">
+            <div class="review-region review-region-logo">
+              <span class="technical-label text-[#aebbd0]">Logo</span>
+              <span class="northstar-wordmark mt-auto text-4xl">Northstar</span>
+            </div>
+            <div class="review-region review-region-color">
+              <span class="technical-label">Color</span>
+              <div class="mt-auto flex gap-2" aria-label="Northstar review color palette">
+                <span class="review-swatch bg-[#24334b]"></span>
+                <span class="review-swatch bg-[#ee7c58]"></span>
+                <span class="review-swatch bg-[#f7f1df]"></span>
+              </div>
+            </div>
+            <div class="review-note">
+              <p class="technical-label">Review note</p>
+              <p class="mt-2 text-sm leading-6">The warmer signal reads clearly against Ink.</p>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="proof-card proof-card-export">
+        <div class="proof-copy">
+          <p class="technical-label">Export</p>
+          <h3 class="marketing-heading mt-3 text-3xl">Export reusable Brand Artifacts</h3>
+          <p class="mt-4 leading-7 text-[var(--sc-color-muted)]">
+            Carry the exact logo files, color values, type rules, and supporting direction into
+            every place Northstar appears.
+          </p>
+        </div>
+
+        <div class="export-panel mt-8">
+          <div class="export-group">
+            <p class="technical-label">Logo files</p>
+            <ul class="artifact-list mt-3">
+              <li><span class="artifact-icon" aria-hidden="true">N</span><span>northstar-wordmark.svg</span><span>SVG</span></li>
+              <li><span class="artifact-icon artifact-icon-star" aria-hidden="true">✦</span><span>northstar-symbol.svg</span><span>SVG</span></li>
+            </ul>
+          </div>
+          <div class="export-group">
+            <p class="technical-label">Color values</p>
+            <ul class="artifact-values mt-3">
+              <li><span class="value-swatch bg-[#24334b]"></span><span>Ink · #24334B</span></li>
+              <li><span class="value-swatch bg-[#ee7c58]"></span><span>Signal · #EE7C58</span></li>
+            </ul>
+          </div>
+          <div class="export-group">
+            <p class="technical-label">Type rules</p>
+            <ul class="artifact-values mt-3">
+              <li><span class="northstar-serif text-2xl">Aa</span><span>Display · Instrument Serif</span></li>
+              <li><span class="font-semibold">Aa</span><span>Interface · Inter</span></li>
+            </ul>
+          </div>
+          <div class="export-group export-supporting">
+            <p class="technical-label">Supporting direction</p>
+            <p class="mt-3 text-sm leading-6">Voice examples · Photography direction · Motion parameters</p>
+          </div>
+        </div>
+      </article>
+
+      <section
+        aria-labelledby="tokens-heading"
+        class="proof-card proof-card-tokens"
+      >
+        <div class="proof-copy">
+          <p class="technical-label">Design Tokens</p>
+          <h3 id="tokens-heading" class="marketing-heading mt-3 text-3xl">
+            Northstar Design Tokens
+          </h3>
+          <p class="mt-4 leading-7 text-[#c9d2df]">
+            Implementation ready values keep the Brand System precise in CSS and JSON.
+          </p>
+        </div>
+
+        <div class="token-outputs mt-8">
+          <div class="token-output">
+            <p class="technical-label text-[#aebbd0]">CSS</p>
+            <pre aria-label="CSS output" class="mt-4"><code>{cssOutput}</code></pre>
+          </div>
+          <div class="token-output">
+            <p class="technical-label text-[#aebbd0]">JSON</p>
+            <pre aria-label="JSON output" class="mt-4"><code>{jsonOutput}</code></pre>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</section>
+
+<section aria-label="Start your Brand System" class="final-action">
+  <div class="mx-auto max-w-4xl px-5 py-20 text-center sm:px-8 sm:py-28">
+    <p class="eyebrow">A complete system you can keep moving</p>
+    <h2 class="marketing-heading mt-4 text-4xl leading-tight sm:text-6xl">
+      Build a brand that is ready for what comes next.
+    </h2>
+    <p class="mx-auto mt-6 max-w-2xl text-lg leading-8 text-[var(--sc-color-muted)]">
+      Start with the company you are building. Your Brand Agent will turn that direction into a
+      coherent Brand System you can refine, review, and ship.
+    </p>
+    <a class="action-link mt-8" href={productUrl}>Start your Brand Brief</a>
+  </div>
+</section>
