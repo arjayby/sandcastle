@@ -27,7 +27,7 @@ test("readers receive the complete article and its discovery metadata", async ()
   assert.match(page, /<meta property="og:type" content="article"/);
   assert.match(
     page,
-    /<meta property="og:image" content="https:\/\/sandcastle\.app\/social\/build-a-brand-system\.svg"/,
+    /<meta property="og:image" content="https:\/\/sandcastle\.app\/social\/build-a-brand-system\.png"/,
   );
   assert.match(page, /<meta name="twitter:card" content="summary_large_image"/);
   assert.match(

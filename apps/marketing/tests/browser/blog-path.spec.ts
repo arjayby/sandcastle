@@ -21,6 +21,15 @@ test("a reader opens a real MDX article from the blog index", async ({
   await expect(
     page.getByRole("link", { name: "All articles" }),
   ).toHaveAttribute("href", "/blog/");
+
+  await page
+    .getByRole("link", { name: "Build your Brand System", exact: true })
+    .first()
+    .click();
+  await expect(page).toHaveURL("http://localhost:5173/new");
+  await expect(
+    page.getByRole("heading", { name: "Start with your Brand Brief" }),
+  ).toBeVisible();
 });
 
 test("article content works at phone and desktop widths with a keyboard", async ({
@@ -39,8 +48,17 @@ test("article content works at phone and desktop widths with a keyboard", async 
       ),
     ).toBe(true);
     const example = page.getByText("Check system coherence");
-    await example.focus();
+    for (let tabPress = 0; tabPress < 10; tabPress += 1) {
+      if (
+        await example.evaluate((element) => element === document.activeElement)
+      ) {
+        break;
+      }
+      await page.keyboard.press("Tab");
+    }
     await expect(example).toBeFocused();
+    await expect(example).toHaveCSS("outline-style", "solid");
+    await expect(example).toHaveCSS("outline-width", "3px");
     await page.keyboard.press("Enter");
     await expect(
       page.getByText("Compare one message across your website"),

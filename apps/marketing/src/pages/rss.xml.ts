@@ -5,7 +5,7 @@ import type { APIRoute } from "astro";
 import { getBlogArticles } from "../lib/blog";
 
 export const GET: APIRoute = async (context) => {
-  const articles = await getBlogArticles();
+  const articles = await getBlogArticles({ includeDrafts: false });
 
   return rss({
     title: "Sandcastle journal",

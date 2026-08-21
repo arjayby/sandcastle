@@ -20,7 +20,8 @@
     text-underline-offset: 0.2em;
   }
 
-  a:focus-visible {
+  a:focus-visible,
+  summary:focus-visible {
     outline: 3px solid var(--sc-color-ink);
     outline-offset: 3px;
   }

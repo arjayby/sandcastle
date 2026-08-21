@@ -5,13 +5,11 @@ import Footer from "../../components/Footer.astro";
 import Header from "../../components/Header.astro";
 import { approvedMdxComponents } from "../../components/mdx/approved-components";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { getBlogArticles } from "../../lib/blog";
+import { formatBlogDate, getBlogArticles } from "../../lib/blog";
 import { productLinks } from "../../lib/product-links";
 
 export async function getStaticPaths() {
-  const articles = await getBlogArticles({
-    includeDrafts: !import.meta.env.PROD,
-  });
+  const articles = await getBlogArticles();
 
   return articles.map((article) => ({
     params: { slug: article.id },
@@ -63,11 +61,11 @@ const structuredData = {
         <div class="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm text-[var(--sc-color-muted)]">
           <span>{data.author}</span>
           <time datetime={data.publicationDate.toISOString()}>
-            {data.publicationDate.toLocaleDateString("en", { dateStyle: "long" })}
+            {formatBlogDate(data.publicationDate)}
           </time>
           {data.updateDate && (
             <span>
-              Updated <time datetime={data.updateDate.toISOString()}>{data.updateDate.toLocaleDateString("en", { dateStyle: "long" })}</time>
+              Updated <time datetime={data.updateDate.toISOString()}>{formatBlogDate(data.updateDate)}</time>
             </span>
           )}
         </div>

@@ -2,12 +2,10 @@
 import Footer from "../../components/Footer.astro";
 import Header from "../../components/Header.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { getBlogArticles } from "../../lib/blog";
+import { formatBlogDate, getBlogArticles } from "../../lib/blog";
 import { productLinks } from "../../lib/product-links";
 
-const articles = await getBlogArticles({
-  includeDrafts: !import.meta.env.PROD,
-});
+const articles = await getBlogArticles();
 ---
 
 <BaseLayout
@@ -32,7 +30,7 @@ const articles = await getBlogArticles({
             <p class="mt-4 max-w-2xl leading-7 text-[var(--sc-color-muted)]">{data.description}</p>
             <p class="mt-5 text-sm text-[var(--sc-color-muted)]">
               <time datetime={data.publicationDate.toISOString()}>
-                {data.publicationDate.toLocaleDateString("en", { dateStyle: "long" })}
+                {formatBlogDate(data.publicationDate)}
               </time>
               {` · ${data.author}`}
             </p>

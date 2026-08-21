@@ -13,7 +13,7 @@ author: Sandcastle
 category: Brand systems
 tags:
   - Foundations
-socialImage: https://sandcastle.app/social/article-name.svg
+socialImage: https://sandcastle.app/social/article-name.png
 canonicalUrl: https://sandcastle.app/blog/article-name/
 draft: false
 ```
