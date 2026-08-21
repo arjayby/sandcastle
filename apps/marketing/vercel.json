@@ -1,0 +1,7 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "cd ../.. && pnpm exec turbo run build --filter=marketing",
+  "framework": "astro",
+  "ignoreCommand": "cd ../.. && pnpm exec turbo-ignore marketing --fallback=HEAD^1",
+  "outputDirectory": "dist"
+}

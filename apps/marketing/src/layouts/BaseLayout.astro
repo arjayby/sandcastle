@@ -16,13 +16,16 @@ interface Props {
 }
 
 const {
-  canonicalUrl,
+  canonicalUrl: explicitCanonicalUrl,
   description,
   image,
   openGraphType = "website",
   structuredData,
   title,
 } = Astro.props;
+const canonicalUrl =
+  explicitCanonicalUrl ??
+  new URL(Astro.url.pathname, Astro.site ?? Astro.url.origin).href;
 ---
 
 <!doctype html>
@@ -31,11 +34,11 @@ const {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
     <meta name="description" content={description} />
-    {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+    <link rel="canonical" href={canonicalUrl} />
     <meta property="og:type" content={openGraphType} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
+    <meta property="og:url" content={canonicalUrl} />
     {image && <meta property="og:image" content={image} />}
     <meta name="twitter:card" content={image ? "summary_large_image" : "summary"} />
     <meta name="twitter:title" content={title} />

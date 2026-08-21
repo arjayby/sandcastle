@@ -8,6 +8,10 @@ const readOutput = (path) =>
 test("readers can find a published article while drafts stay private", async () => {
   const page = await readOutput("blog/index.html");
 
+  assert.match(
+    page,
+    /<link rel="canonical" href="https:\/\/sandcastle\.app\/blog\/"/,
+  );
   assert.match(page, /href="\/blog\/build-a-brand-system\/"/);
   assert.match(page, />Build a Brand System that stays coherent</);
   assert.doesNotMatch(page, /A draft article/);

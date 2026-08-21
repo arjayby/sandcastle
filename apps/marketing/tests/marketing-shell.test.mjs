@@ -22,6 +22,10 @@ test("the static page publishes default metadata without browser JavaScript", ()
     page,
     /<meta name="description" content="Create a complete, coherent Brand System with an expert AI Brand Agent\."\s*\/?>/,
   );
+  assert.match(
+    page,
+    /<link rel="canonical" href="https:\/\/sandcastle\.app\/"/,
+  );
   assert.doesNotMatch(page, /<script[\s>]/);
 });
 

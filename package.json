@@ -29,6 +29,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^17.2.0",
     "turbo": "^2.10.7",
+    "turbo-ignore": "^2.10.11",
     "typescript": "catalog:"
   },
   "lint-staged": {
